@@ -324,25 +324,7 @@ body {
   border-radius: 8px;
 }
 
-/* Interim Speech Overlay Badge */
-.interim-speech-badge {
-  position: absolute;
-  top: 125px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(239, 68, 68, 0.2);
-  border: 1px solid rgba(239, 68, 68, 0.5);
-  color: #fca5a5;
-  padding: 6px 16px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  backdrop-filter: blur(10px);
-  z-index: 40;
-}
+/* Interim Speech Overlay Badge — definition kept below near AR section */
 
 .pulse-red {
   width: 8px;
@@ -978,6 +960,64 @@ body {
 
 .ar-3d-layer:active {
   cursor: grabbing;
+}
+
+/* Layer 2: MediaPipe hand skeleton canvas */
+.ar-hand-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 3; /* on top of 3D canvas */
+  pointer-events: none; /* pass-through so 3D canvas still receives mouse */
+  transform: scaleX(-1); /* mirror to match selfie video */
+}
+
+/* MediaPipe ready badge */
+.mp-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent-emerald);
+  letter-spacing: 0.5px;
+}
+
+/* Gesture hint row in AR HUD */
+.ar-prop.gesture-hint {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-glass);
+  color: var(--accent-cyan);
+}
+
+/* Streaming pre-route pulse — more prominent than before */
+.interim-speech-badge {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(7, 10, 18, 0.92);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  padding: 10px 20px;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent-cyan);
+  z-index: 100;
+  box-shadow: 0 4px 24px rgba(6, 182, 212, 0.2);
+  max-width: 600px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 /* Floating AR Properties HUD */

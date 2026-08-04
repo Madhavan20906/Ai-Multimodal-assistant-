@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { WorkbenchState, OperatingMode, RepresentationPayload, SceneObject } from './types';
 import { AIRouterService } from './services/aiRouter';
 import { HUDHeader } from './components/HUDHeader';
@@ -8,14 +8,14 @@ import { SceneHierarchy } from './components/SceneHierarchy';
 import { DomainPresets } from './components/DomainPresets';
 
 // Representation Views
-import { ThreeDWorkbench } from './components/representations/ThreeDWorkbench';
-import { PhysicsSimulator } from './components/representations/PhysicsSimulator';
-import { MathDerivationView } from './components/representations/MathDerivationView';
-import { AlgorithmVisualizer } from './components/representations/AlgorithmVisualizer';
-import { ChemistryLabView } from './components/representations/ChemistryLabView';
-import { CodeWorkbenchView } from './components/representations/CodeWorkbenchView';
-import { InteractiveDiagramView } from './components/representations/InteractiveDiagramView';
-import { RichKnowledgeView } from './components/representations/RichKnowledgeView';
+import { ThreeDWorkbench }       from './components/representations/ThreeDWorkbench';
+import { PhysicsSimulator }      from './components/representations/PhysicsSimulator';
+import { MathDerivationView }    from './components/representations/MathDerivationView';
+import { AlgorithmVisualizer }   from './components/representations/AlgorithmVisualizer';
+import { ChemistryLabView }      from './components/representations/ChemistryLabView';
+import { CodeWorkbenchView }     from './components/representations/CodeWorkbenchView';
+import { InteractiveDiagramView }from './components/representations/InteractiveDiagramView';
+import { RichKnowledgeView }     from './components/representations/RichKnowledgeView';
 
 export const App: React.FC = () => {
   const [state, setState] = useState<WorkbenchState>({
@@ -34,129 +34,170 @@ export const App: React.FC = () => {
     drawingBrushSize: 4,
   });
 
-  // Initial Welcome Scene Payload
-  useEffect(() => {
-    handleProcessCommand('Create a chemistry laboratory');
-  }, []);
+  /**
+   * Streaming pre-route timer.
+   * When interim speech arrives, we start a short timer (~600ms). If more
+   * interim speech keeps coming the timer resets. Once the timer fires we
+   * pre-route the phrase to give the workbench a head-start building the
+   * scene before the user finishes speaking.
+   */
+  const preRouteTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastPreRouteRef   = useRef<string>('');
+  const isPreRoutingRef   = useRef(false);
 
-  // Process Spoken or Typed Command automatically
+  // Initial welcome scene — runs once on mount
+  useEffect(() => {
+    AIRouterService.processInput('Create a chemistry laboratory', null, []).then((payload) => {
+      setState((prev) => ({
+        ...prev,
+        activePayload: payload,
+        history: [payload],
+        historyIndex: 0,
+      }));
+    });
+  }, []); // empty deps: intentionally runs once
+
+  // ── Final command handler ────────────────────────────────────────────────
   const handleProcessCommand = useCallback(
     async (input: string) => {
       if (!input.trim()) return;
 
-      console.log('Processing Workbench Input:', input);
-      const newPayload = await AIRouterService.processInput(input, state.activePayload, state.objectHierarchy);
+      // Cancel any pending pre-route since the final command takes precedence
+      if (preRouteTimerRef.current) {
+        clearTimeout(preRouteTimerRef.current);
+        preRouteTimerRef.current = null;
+      }
+      isPreRoutingRef.current = false;
+
+      console.log('[App] Processing command:', input);
+      const newPayload = await AIRouterService.processInput(
+        input,
+        state.activePayload,
+        state.objectHierarchy,
+      );
 
       setState((prev) => {
-        // Extract 3D objects if present to update persistent object hierarchy
         let updatedObjects = [...prev.objectHierarchy];
         if (newPayload.threeDData?.objects) {
           newPayload.threeDData.objects.forEach((newObj) => {
-            const existingIdx = updatedObjects.findIndex((o) => o.id === newObj.id);
-            if (existingIdx >= 0) {
-              updatedObjects[existingIdx] = newObj;
-            } else {
-              updatedObjects.push(newObj);
-            }
+            const idx = updatedObjects.findIndex((o) => o.id === newObj.id);
+            if (idx >= 0) updatedObjects[idx] = newObj;
+            else          updatedObjects.push(newObj);
           });
         }
-
-        const newHistory = [...prev.history.slice(0, prev.historyIndex + 1), newPayload];
+        const newHistory      = [...prev.history.slice(0, prev.historyIndex + 1), newPayload];
         const newHistoryIndex = newHistory.length - 1;
-
         return {
           ...prev,
-          activePayload: newPayload,
+          activePayload:   newPayload,
           objectHierarchy: updatedObjects,
-          history: newHistory,
-          historyIndex: newHistoryIndex,
-          speechTranscript: input,
+          history:         newHistory,
+          historyIndex:    newHistoryIndex,
+          speechTranscript:input,
           interimTranscript: '',
         };
       });
     },
-    [state.activePayload, state.objectHierarchy]
+    [state.activePayload, state.objectHierarchy],
   );
 
-  // Undo Action
+  // ── Interim speech → streaming pre-route ────────────────────────────────
+  const handleInterimTranscript = useCallback(
+    (interim: string) => {
+      setState((prev) => ({ ...prev, interimTranscript: interim }));
+
+      if (!interim.trim() || interim.length < 8) return;
+
+      // Debounce: reset the pre-route timer every time new interim arrives
+      if (preRouteTimerRef.current) clearTimeout(preRouteTimerRef.current);
+
+      preRouteTimerRef.current = setTimeout(async () => {
+        // Only pre-route if this phrase hasn't been pre-routed already and
+        // the final command hasn't already been dispatched
+        if (isPreRoutingRef.current || interim === lastPreRouteRef.current) return;
+        isPreRoutingRef.current  = true;
+        lastPreRouteRef.current  = interim;
+
+        console.log('[App] Streaming pre-route on interim:', interim);
+        try {
+          const prePayload = await AIRouterService.processInput(
+            interim,
+            state.activePayload,
+            state.objectHierarchy,
+          );
+          // Only apply if user is still speaking (interimTranscript still set)
+          setState((prev) => {
+            if (!prev.interimTranscript) return prev; // final arrived first — skip
+            return { ...prev, activePayload: prePayload };
+          });
+        } catch (e) {
+          console.warn('[App] Pre-route error:', e);
+        } finally {
+          isPreRoutingRef.current = false;
+        }
+      }, 600); // 600ms debounce — balances responsiveness vs noise
+    },
+    [state.activePayload, state.objectHierarchy],
+  );
+
+  // ── Undo / Redo ───────────────────────────────────────────────────────────
   const handleUndo = () => {
     if (state.historyIndex > 0) {
-      const prevIdx = state.historyIndex - 1;
-      const prevPayload = state.history[prevIdx];
-      setState((prev) => ({
-        ...prev,
-        historyIndex: prevIdx,
-        activePayload: prevPayload,
-      }));
+      const idx     = state.historyIndex - 1;
+      const payload = state.history[idx];
+      setState((prev) => ({ ...prev, historyIndex: idx, activePayload: payload }));
     }
   };
-
-  // Redo Action
   const handleRedo = () => {
     if (state.historyIndex < state.history.length - 1) {
-      const nextIdx = state.historyIndex + 1;
-      const nextPayload = state.history[nextIdx];
-      setState((prev) => ({
-        ...prev,
-        historyIndex: nextIdx,
-        activePayload: nextPayload,
-      }));
+      const idx     = state.historyIndex + 1;
+      const payload = state.history[idx];
+      setState((prev) => ({ ...prev, historyIndex: idx, activePayload: payload }));
     }
   };
 
-  // In camera mode with 3D scene, the AR overlay IS the representation — skip standalone card
-  const isARMode = state.mode === 'camera_mic' && state.isCameraActive && state.activePayload?.type === '3d_scene';
+  // ── Gesture detected callback from CameraHandTracker ──────────────────
+  const handleGestureDetected = useCallback((gestureName: string, _coords: { x: number; y: number }) => {
+    setState((prev) => ({ ...prev, detectedGesture: gestureName }));
+  }, []);
 
-  // Render Current Selected Representation Engine Component
+  // In camera mode with 3D scene, AR overlay renders the 3D — skip standalone card
+  const isARMode = state.mode === 'camera_mic' && state.isCameraActive
+    && state.activePayload?.type === '3d_scene';
+
   const renderActiveRepresentation = () => {
     if (!state.activePayload) return null;
-
-    // When AR mode is active for 3D scenes, the CameraHandTracker renders the 3D over video
-    // so we skip the standalone ThreeDWorkbench card
-    if (isARMode) return null;
+    if (isARMode)              return null;
 
     switch (state.activePayload.type) {
-      case '3d_scene':
-        return <ThreeDWorkbench payload={state.activePayload} />;
-      case 'physics_simulation':
-        return <PhysicsSimulator payload={state.activePayload} />;
-      case 'math_derivation':
-        return <MathDerivationView payload={state.activePayload} />;
-      case 'algorithm_visualizer':
-        return <AlgorithmVisualizer payload={state.activePayload} />;
-      case 'chemistry_lab':
-        return <ChemistryLabView payload={state.activePayload} />;
-      case 'code_workbench':
-        return <CodeWorkbenchView payload={state.activePayload} />;
-      case 'interactive_diagram':
-        return <InteractiveDiagramView payload={state.activePayload} />;
-      case 'rich_knowledge':
-        return <RichKnowledgeView payload={state.activePayload} />;
-      default:
-        return <RichKnowledgeView payload={state.activePayload} />;
+      case '3d_scene':          return <ThreeDWorkbench payload={state.activePayload} />;
+      case 'physics_simulation':return <PhysicsSimulator payload={state.activePayload} />;
+      case 'math_derivation':   return <MathDerivationView payload={state.activePayload} />;
+      case 'algorithm_visualizer': return <AlgorithmVisualizer payload={state.activePayload} />;
+      case 'chemistry_lab':     return <ChemistryLabView payload={state.activePayload} />;
+      case 'code_workbench':    return <CodeWorkbenchView payload={state.activePayload} />;
+      case 'interactive_diagram': return <InteractiveDiagramView payload={state.activePayload} />;
+      case 'rich_knowledge':    return <RichKnowledgeView payload={state.activePayload} />;
+      default:                  return <RichKnowledgeView payload={state.activePayload} />;
     }
   };
 
   return (
     <div className="aura-workbench-root">
-      {/* Speech Controller Engine (Headless STT + TTS) */}
+      {/* Speech Controller Engine (headless STT + TTS) */}
       <SpeechController
         isListening={state.isListening}
         onVoiceInput={handleProcessCommand}
-        onInterimTranscript={(interim) => setState((prev) => ({ ...prev, interimTranscript: interim }))}
+        onInterimTranscript={handleInterimTranscript}
         narrationText={state.activePayload?.voiceNarrationText}
       />
 
-      {/* Top HUD Header Navigation Bar */}
+      {/* Top HUD Header */}
       <HUDHeader
         mode={state.mode}
-        onToggleMode={(newMode) => {
-          setState((prev) => ({
-            ...prev,
-            mode: newMode,
-            isCameraActive: newMode === 'camera_mic',
-          }));
-        }}
+        onToggleMode={(newMode: OperatingMode) =>
+          setState((prev) => ({ ...prev, mode: newMode, isCameraActive: newMode === 'camera_mic' }))
+        }
         isListening={state.isListening}
         onToggleListening={() => setState((prev) => ({ ...prev, isListening: !prev.isListening }))}
         isCameraActive={state.isCameraActive}
@@ -167,15 +208,15 @@ export const App: React.FC = () => {
         canUndo={state.historyIndex > 0}
         canRedo={state.historyIndex < state.history.length - 1}
         onVoiceInputSubmit={handleProcessCommand}
-        onApiKeySave={(key) => AIRouterService.setApiKey(key)}
+        onApiKeySave={(key: string) => AIRouterService.setApiKey(key)}
         isDrawingMode={state.isDrawingMode}
         onToggleDrawingMode={() => setState((prev) => ({ ...prev, isDrawingMode: !prev.isDrawingMode }))}
       />
 
-      {/* Domain Quick Scenario Presets */}
+      {/* Domain Quick Presets */}
       <DomainPresets onSelectPreset={handleProcessCommand} />
 
-      {/* Interim Continuous Speech Overlay Badge */}
+      {/* Streaming interim speech badge — shows while user speaks */}
       {state.interimTranscript && (
         <div className="interim-speech-badge">
           <span className="dot pulse-red"></span>
@@ -183,33 +224,28 @@ export const App: React.FC = () => {
         </div>
       )}
 
-      {/* Main Workbench Layout: Canvas Viewport + Scene Inspector Sidebar */}
+      {/* Main layout: viewport + sidebar */}
       <div className="workbench-main-layout">
         <main className="workbench-viewport-container">
           {renderActiveRepresentation()}
 
-          {/* Camera AR Overlay + Finger Drawing Layer */}
           <CameraHandTracker
             isCameraActive={state.isCameraActive}
             isDrawingMode={state.isDrawingMode}
             brushColor={state.drawingBrushColor}
             brushSize={state.drawingBrushSize}
             activePayload={state.activePayload}
+            onGestureDetected={handleGestureDetected}
           />
         </main>
 
-        {/* Right Scene Object Tree & History Inspector */}
         <SceneHierarchy
           objects={state.objectHierarchy}
           history={state.history}
           historyIndex={state.historyIndex}
-          onSelectHistoryIndex={(idx) => {
-            setState((prev) => ({
-              ...prev,
-              historyIndex: idx,
-              activePayload: prev.history[idx],
-            }));
-          }}
+          onSelectHistoryIndex={(idx: number) =>
+            setState((prev) => ({ ...prev, historyIndex: idx, activePayload: prev.history[idx] }))
+          }
           activePayload={state.activePayload}
         />
       </div>

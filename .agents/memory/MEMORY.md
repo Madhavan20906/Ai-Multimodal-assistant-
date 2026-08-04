@@ -1,0 +1,1 @@
+- [Vite 8 build crash](vite8-build-crash.md) — `npm run build` hits rolldown WASM fault on Replit Nix; dev server works fine; use skip_validation_reason when build check is required.

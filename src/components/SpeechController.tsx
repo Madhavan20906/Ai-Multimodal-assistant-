@@ -14,6 +14,8 @@ export const SpeechController: React.FC<SpeechControllerProps> = ({
   narrationText
 }) => {
   const recognitionRef = useRef<any>(null);
+  const blockedRef = useRef<boolean>(false);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 1. Voice Recognition Initialization
   useEffect(() => {
@@ -24,6 +26,7 @@ export const SpeechController: React.FC<SpeechControllerProps> = ({
       return;
     }
 
+    blockedRef.current = false;
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
@@ -53,25 +56,36 @@ export const SpeechController: React.FC<SpeechControllerProps> = ({
     };
 
     recognition.onerror = (event: any) => {
-      console.warn('Speech recognition error:', event.error);
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        // Microphone permission denied — stop retrying entirely
+        blockedRef.current = true;
+        console.warn('Microphone permission denied. Open the app in a new tab to grant access.');
+      } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
+        console.warn('Speech recognition error:', event.error);
+      }
     };
 
     recognition.onend = () => {
-      // Auto-restart if continuous mode is still enabled
-      if (isListening && recognitionRef.current) {
+      // Do not restart if permission was denied or listening was stopped
+      if (!isListening || blockedRef.current || !recognitionRef.current) return;
+      // Brief delay before restart to avoid tight spin loops on transient errors
+      retryTimerRef.current = setTimeout(() => {
+        if (!isListening || blockedRef.current) return;
         try {
           recognition.start();
         } catch (e) {
-          // ignore double start errors
+          // ignore double-start errors
         }
-      }
+      }, 300);
     };
 
     recognitionRef.current = recognition;
 
     return () => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
       if (recognitionRef.current) {
         recognitionRef.current.stop();
+        recognitionRef.current = null;
       }
     };
   }, [onVoiceInput, onInterimTranscript]);

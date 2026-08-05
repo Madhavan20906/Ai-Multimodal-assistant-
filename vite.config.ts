@@ -9,6 +9,10 @@ export default defineConfig({
     port: 5000,
     allowedHosts: true,
     strictPort: true,
+    watch: {
+      // Ignore Replit internal skill/agent directories to prevent spurious reloads
+      ignored: ['**/.local/**', '**/.agents/**', '**/node_modules/**'],
+    },
   },
   build: {
     // Both lightningcss and esbuild native binaries are unavailable on this

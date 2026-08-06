@@ -12,7 +12,7 @@ import { ThreeDWorkbench }       from './components/representations/ThreeDWorkbe
 import { PhysicsSimulator }      from './components/representations/PhysicsSimulator';
 import { MathDerivationView }    from './components/representations/MathDerivationView';
 import { AlgorithmVisualizer }   from './components/representations/AlgorithmVisualizer';
-import { ChemistryLabView }      from './components/representations/ChemistryLabView';
+
 import { CodeWorkbenchView }     from './components/representations/CodeWorkbenchView';
 import { InteractiveDiagramView }from './components/representations/InteractiveDiagramView';
 import { UniversalScenarioSimulator } from './components/representations/UniversalScenarioSimulator';
@@ -169,7 +169,8 @@ export const App: React.FC = () => {
     if (!state.activePayload) return null;
     if (isARMode)              return null;
 
-    if (state.activePayload.scenarioData || state.activePayload.type === '3d_scene' || state.activePayload.type === 'chemistry_lab') {
+    // Universal engine handles all scenario-based types including chemistry
+    if (state.activePayload.scenarioData || state.activePayload.type === '3d_scene') {
       return <UniversalScenarioSimulator payload={state.activePayload} />;
     }
 

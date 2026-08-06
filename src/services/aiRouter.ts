@@ -1,6 +1,6 @@
 import { RepresentationPayload, DomainCategory, SceneObject } from '../types';
 import { GroqService } from './groqService';
-import { ChemistrySimulationGenerator } from './chemistrySimulationGenerator';
+
 import { UniversalSimulationGenerator } from './universalSimulationGenerator';
 
 /**
@@ -27,11 +27,6 @@ export class AIRouterService {
       if (updated) return updated;
     }
 
-    // 2. Fast-path: incremental modifications to an active chemistry lab
-    if (!isFullNewRequest && currentPayload && currentPayload.type === 'chemistry_lab') {
-      const updated = this.handleChemistryIncrementalUpdate(text, currentPayload);
-      if (updated) return updated;
-    }
 
     // 3. AI-powered routing via Groq (primary path)
     try {
@@ -76,7 +71,6 @@ export class AIRouterService {
 
     switch (representationType) {
       case '3d_scene':
-      case 'chemistry_lab':
       case 'physics_simulation':
         return GroqService.generateDynamicScenario(rawInput);
       case 'math_derivation':
@@ -154,20 +148,6 @@ export class AIRouterService {
       return this.generate3DScenePayload(rawInput);
     }
 
-    // --- Domain 2: Chemistry ---
-    if (
-      input.includes('chemistry') ||
-      input.includes('laboratory') ||
-      input.includes('hydrochloric acid') ||
-      input.includes('acid') ||
-      input.includes('sodium hydroxide') ||
-      input.includes('mix them') ||
-      input.includes('chemical reaction') ||
-      input.includes('molecule') ||
-      input.includes('reaction')
-    ) {
-      return this.generateChemistryPayload(rawInput);
-    }
 
     // --- Domain 3: Mathematics ---
     if (
@@ -415,60 +395,6 @@ export class AIRouterService {
     return null;
   }
 
-  private static handleChemistryIncrementalUpdate(
-    text: string,
-    currentPayload: RepresentationPayload
-  ): RepresentationPayload | null {
-    if (!currentPayload.chemData) return null;
-
-    // "replace hydrochloric acid with sulfuric acid"
-    if (text.includes('replace hydrochloric acid with sulfuric acid') || text.includes('sulfuric acid')) {
-      return {
-        ...currentPayload,
-        subtitle: 'Substituted HCl with H₂SO₄',
-        voiceNarrationText: 'Hydrochloric acid replaced with Sulfuric Acid. Reaction properties updated.',
-        chemData: {
-          reactants: [
-            { formula: 'H₂SO₄', name: 'Sulfuric Acid', color: '#facc15' },
-            { formula: '2 NaOH', name: 'Sodium Hydroxide', color: '#06b6d4' },
-          ],
-          products: [
-            { formula: 'Na₂SO₄', name: 'Sodium Sulfate', color: '#38bdf8' },
-            { formula: '2 H₂O', name: 'Water', color: '#60a5fa' },
-          ],
-          balancedEquation: 'H₂SO₄(aq) + 2 NaOH(aq) → Na₂SO₄(aq) + 2 H₂O(l)',
-          observations: [
-            'Highly exothermic neutralization reaction',
-            'Sulfate ions (SO₄²⁻) combine with sodium ions',
-            'Temperature increases significantly (~55°C)',
-          ],
-          reactionType: 'Exothermic Neutralization & Salt Formation',
-          isAnimated: true,
-          temperatureChange: '+32.5°C',
-        },
-      };
-    }
-
-    // "mix them" or "trigger reaction"
-    if (text.includes('mix') || text.includes('react') || text.includes('combine')) {
-      return {
-        ...currentPayload,
-        subtitle: 'Chemical Reaction Triggered',
-        voiceNarrationText: 'Mixing compounds. Neutralization reaction occurring with heat release.',
-        chemData: {
-          ...currentPayload.chemData,
-          isAnimated: true,
-          observations: [
-            ...currentPayload.chemData.observations,
-            'Effervescence observed as heat causes microscopic thermal expansion.',
-            'pH levels equilibrating towards neutral (pH 7.0).',
-          ],
-        },
-      };
-    }
-
-    return null;
-  }
 
   // --- Specific Payload Generators ---
 
@@ -546,9 +472,6 @@ export class AIRouterService {
     return UniversalSimulationGenerator.createScenario(rawInput);
   }
 
-  private static generateChemistryPayload(rawInput: string): RepresentationPayload {
-    return ChemistrySimulationGenerator.createSimulation(rawInput);
-  }
 
   private static generateMathPayload(rawInput: string): RepresentationPayload {
     return {

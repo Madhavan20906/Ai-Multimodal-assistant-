@@ -1,5 +1,5 @@
 import { RepresentationType, DomainCategory, RepresentationPayload } from '../types';
-import { ChemistrySimulationGenerator } from './chemistrySimulationGenerator';
+import { UniversalSimulationGenerator } from './universalSimulationGenerator';
 
 export interface GroqClassification {
   representationType: RepresentationType;
@@ -179,27 +179,18 @@ Return ONLY valid JSON:
       ], 700);
 
       const d = JSON.parse(raw);
-      const baseSimulation = ChemistrySimulationGenerator.createSimulation(input);
       return {
-        ...baseSimulation,
-        title: d.title ?? baseSimulation.title,
-        subtitle: d.subtitle ?? baseSimulation.subtitle,
-        summaryText: d.summaryText ?? baseSimulation.summaryText,
-        voiceNarrationText: d.voiceNarrationText ?? baseSimulation.voiceNarrationText,
-        chemData: {
-          ...baseSimulation.chemData,
-          reactants: d.reactants ?? baseSimulation.chemData?.reactants,
-          products: d.products ?? baseSimulation.chemData?.products,
-          balancedEquation: d.balancedEquation ?? baseSimulation.chemData?.balancedEquation,
-          observations: d.observations ?? baseSimulation.chemData?.observations,
-          reactionType: d.reactionType ?? baseSimulation.chemData?.reactionType,
-          temperatureChange: d.temperatureChange ?? baseSimulation.chemData?.temperatureChange,
-          isAnimated: true,
-        },
+        type: '3d_scene',
+        domain: 'Chemistry',
+        title: d.title ?? 'Chemistry Lab Simulation',
+        subtitle: d.subtitle ?? 'Chemical Reaction Simulation',
+        summaryText: d.summaryText ?? 'AI generated chemistry reaction simulation.',
+        voiceNarrationText: d.voiceNarrationText ?? 'Initiating chemistry simulation.',
+        scenarioData: d.scenarioData,
       };
     } catch (err) {
       console.warn('[GroqService] Chemistry generation fallback:', err);
-      return ChemistrySimulationGenerator.createSimulation(input);
+      return UniversalSimulationGenerator.createScenario(input);
     }
   }
 
@@ -399,7 +390,7 @@ Return ONLY valid JSON in this exact structure:
       };
     } catch (err) {
       console.warn('[GroqService] Dynamic scenario generation failed, falling back:', err);
-      return ChemistrySimulationGenerator.createSimulation(input);
+      return UniversalSimulationGenerator.createScenario(input);
     }
   }
 

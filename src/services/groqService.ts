@@ -1,4 +1,5 @@
 import { RepresentationType, DomainCategory, RepresentationPayload } from '../types';
+import { ChemistrySimulationGenerator } from './chemistrySimulationGenerator';
 
 export interface GroqClassification {
   representationType: RepresentationType;
@@ -145,10 +146,11 @@ Return ONLY valid JSON:
   // ─── Chemistry generator ───────────────────────────────────────────────────
 
   static async generateChemistry(input: string): Promise<RepresentationPayload> {
-    const raw = await GroqService.chat([
-      {
-        role: 'system',
-        content: `You generate chemistry lab data for AURA Workbench.
+    try {
+      const raw = await GroqService.chat([
+        {
+          role: 'system',
+          content: `You generate chemistry lab data for AURA Workbench.
 Given a user's description of a chemical reaction or concept, produce accurate chemistry data.
 
 For color, pick a visually distinct CSS hex color that reflects the chemical (e.g. sulfuric acid → "#facc15", copper sulfate → "#06b6d4", blood/iron → "#ef4444").
@@ -172,28 +174,33 @@ Return ONLY valid JSON:
   "reactionType": "Acid-Base Neutralization",
   "temperatureChange": "+14.2°C"
 }`,
-      },
-      { role: 'user', content: input },
-    ], 700);
+        },
+        { role: 'user', content: input },
+      ], 700);
 
-    const d = JSON.parse(raw);
-    return {
-      type: 'chemistry_lab',
-      domain: 'Chemistry',
-      title: d.title,
-      subtitle: d.subtitle,
-      summaryText: d.summaryText,
-      voiceNarrationText: d.voiceNarrationText,
-      chemData: {
-        reactants: d.reactants,
-        products: d.products,
-        balancedEquation: d.balancedEquation,
-        observations: d.observations,
-        reactionType: d.reactionType,
-        isAnimated: false,
-        temperatureChange: d.temperatureChange,
-      },
-    };
+      const d = JSON.parse(raw);
+      const baseSimulation = ChemistrySimulationGenerator.createSimulation(input);
+      return {
+        ...baseSimulation,
+        title: d.title ?? baseSimulation.title,
+        subtitle: d.subtitle ?? baseSimulation.subtitle,
+        summaryText: d.summaryText ?? baseSimulation.summaryText,
+        voiceNarrationText: d.voiceNarrationText ?? baseSimulation.voiceNarrationText,
+        chemData: {
+          ...baseSimulation.chemData,
+          reactants: d.reactants ?? baseSimulation.chemData?.reactants,
+          products: d.products ?? baseSimulation.chemData?.products,
+          balancedEquation: d.balancedEquation ?? baseSimulation.chemData?.balancedEquation,
+          observations: d.observations ?? baseSimulation.chemData?.observations,
+          reactionType: d.reactionType ?? baseSimulation.chemData?.reactionType,
+          temperatureChange: d.temperatureChange ?? baseSimulation.chemData?.temperatureChange,
+          isAnimated: true,
+        },
+      };
+    } catch (err) {
+      console.warn('[GroqService] Chemistry generation fallback:', err);
+      return ChemistrySimulationGenerator.createSimulation(input);
+    }
   }
 
   // ─── Math generator ────────────────────────────────────────────────────────
@@ -289,6 +296,111 @@ Return ONLY valid JSON:
         executionSteps: d.executionSteps ?? [],
       },
     };
+  }
+
+  // ─── Dynamic Scenario generator ────────────────────────────────────────────
+
+  static async generateDynamicScenario(input: string): Promise<RepresentationPayload> {
+    try {
+      const raw = await GroqService.chat([
+        {
+          role: 'system',
+          content: `You are an advanced AI Scientific & Technical Scenario Simulation Generator.
+Given a user's description of a scenario (which can be physics, biology, chemistry, engineering, geology, space, astronomy, or any technical concept), output a complete, valid JSON structure describing a high-fidelity multi-step 3D/2D animated visual simulation scene.
+
+Choose a suitable environment:
+- "space" → astronomy, rockets, planets, orbits
+- "microscopic" → atoms, DNA, cells, quantum particles
+- "blueprint" → engineering, machines, circuits, gears
+- "nature" → geology, volcanoes, weather, biology
+- "cyber" → computing, networks, algorithms
+- "studio" → general physics, optics, waves (default)
+
+Design 2 to 4 entities. Pick the BEST shape for domain accuracy:
+- "rocket" → launch vehicles, spacecraft, boosters (draws Saturn V style with fins, nose cone, engine flame)
+- "planet" → planets, moons, celestial bodies (draws sphere with bands, atmosphere glow, optional rings)
+- "atom" → elements, molecules, quantum states (draws nucleus cluster + 3 electron orbital shells)
+- "piston" → engines, thermodynamics, mechanics (draws full reciprocating piston with crankshaft)
+- "dna" → genetics, biology, molecular biology (draws rotating double helix with colored base pairs)
+- "chloroplast" → photosynthesis, plant biology, cells (draws hexagonal cell with thylakoid stacks)
+- "volcano" → geology, plate tectonics, earth science (draws erupting mountain with lava particles)
+- "prism" → optics, light, wavelengths, refraction (draws glass triangle with rainbow dispersion rays)
+- "gear" → mechanical engineering, machines, robotics (draws 10-tooth mechanical gear with axle)
+- "circuit" → electronics, electricity, Ohm's law (draws battery + resistor loop with flowing electrons)
+- "wave" → physics waves, sound, electromagnetic (draws dual interfering sine waves with nodes)
+- "cube" → 3D geometry, crystal structures (draws rotating projected 3D cube with faces)
+- "sphere" → general objects, balls, planets (draws shiny sphere with specular highlight)
+
+Design a continuous sequence of 5 to 7 animated steps. Each step specifies:
+- title: "STEP N: Short Action Title"
+- description: what is visually happening in this step
+- narrationText: clear spoken narration for voice synthesis
+- cameraView: "wide" | "close_up" | "top_view" | "microscopic_zoom" | "cinematic"
+- activeEntityId: which entity is the focus of this step
+- animationAction: "idle" | "move" | "rotate" | "collide" | "transform" | "explode"
+- particleEffect: "none" | "fire_smoke" | "sparks" | "water_bubbles" | "energy_waves" | "light_beam" | "glow_aura"
+- readoutData: 2-3 realistic telemetry badges (e.g. [{"label": "Thrust", "value": "7.6 MN"}, {"label": "Altitude", "value": "12.5 km"}])
+
+Return ONLY valid JSON in this exact structure:
+{
+  "title": "Simulation Main Title",
+  "subtitle": "Technical / Domain Subtitle",
+  "summaryText": "Brief 2-sentence summary of the physical mechanism being simulated.",
+  "voiceNarrationText": "1-sentence voice introduction to the overall simulation.",
+  "scenarioData": {
+    "scenarioTitle": "Descriptive Scenario Title",
+    "environment": "space|microscopic|blueprint|nature|cyber|studio",
+    "entities": [
+      {
+        "id": "entity_1",
+        "name": "Human-readable Entity Name",
+        "shape": "rocket|planet|atom|piston|dna|chloroplast|volcano|prism|gear|circuit|wave|cube|sphere",
+        "color": "#hexcolor",
+        "size": 1.5,
+        "position": {"x": 0, "y": 0, "z": 0},
+        "glowing": true
+      }
+    ],
+    "steps": [
+      {
+        "stepNumber": 1,
+        "title": "STEP 1: Title",
+        "description": "Visual description of what is happening.",
+        "narrationText": "Clear spoken narration for this step.",
+        "cameraView": "wide",
+        "activeEntityId": "entity_1",
+        "animationAction": "idle",
+        "particleEffect": "none",
+        "readoutData": [
+          {"label": "Parameter", "value": "Value Unit"}
+        ]
+      }
+    ],
+    "observations": [
+      "Key scientific observation 1",
+      "Key scientific observation 2"
+    ],
+    "takeawayConclusion": "Core conceptual takeaway from this simulation."
+  }
+}`
+        },
+        { role: 'user', content: input }
+      ], 1200);
+
+      const d = JSON.parse(raw);
+      return {
+        type: '3d_scene',
+        domain: 'General',
+        title: d.title ?? 'Dynamic Scenario Simulation',
+        subtitle: d.subtitle ?? 'AI Generated Animated Physics & Concepts',
+        summaryText: d.summaryText ?? 'AI generated step-by-step physical simulation.',
+        voiceNarrationText: d.voiceNarrationText ?? 'Initiating custom visual simulation.',
+        scenarioData: d.scenarioData
+      };
+    } catch (err) {
+      console.warn('[GroqService] Dynamic scenario generation failed, falling back:', err);
+      return ChemistrySimulationGenerator.createSimulation(input);
+    }
   }
 
   // ─── Rich knowledge generator ──────────────────────────────────────────────

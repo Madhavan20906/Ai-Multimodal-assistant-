@@ -88,15 +88,51 @@ export interface RepresentationPayload {
     }[];
   };
 
-  // Chemistry Data
+  // Chemistry Data & 12-Step AI Laboratory Simulation
   chemData?: {
-    reactants: { formula: string; name: string; color: string }[];
-    products: { formula: string; name: string; color: string }[];
-    balancedEquation: string;
+    experimentName?: string;
+    objective?: string;
+    reactants: { formula: string; name: string; color: string; volume?: string; state?: string }[];
+    products: { formula: string; name: string; color: string; state?: string }[];
+    apparatus?: string[];
+    procedure?: string[];
     observations: string[];
+    result?: string;
+    balancedEquation: string;
     reactionType: string;
     isAnimated: boolean;
     temperatureChange?: string;
+    safetyEquipment?: string[];
+    narrationScript?: string;
+    currentStepIndex?: number;
+    steps?: {
+      stepNumber: number;
+      title: string;
+      description: string;
+      narrationText: string;
+      cameraView: 'wide' | 'close_up' | 'top_view' | 'macro_molecular' | 'cinematic';
+      activeApparatus?: string;
+      activeChemical?: string;
+      action?: 'environment' | 'setup' | 'highlight' | 'pick_apparatus' | 'pour' | 'mix' | 'react' | 'microscopic_zoom' | 'return_macro' | 'final_product' | 'observations' | 'conclusion';
+      fluidColor?: string;
+      fluidLevel?: number;
+      reactionEffects?: {
+        bubbles?: boolean;
+        smoke?: boolean;
+        flame?: boolean;
+        precipitate?: boolean;
+        precipitateColor?: string;
+        crystallization?: boolean;
+        glowing?: boolean;
+        colorChange?: boolean;
+        pHValue?: number;
+        temperature?: number;
+      };
+    }[];
+    microscopicData?: {
+      reactantsAtoms: { symbol: string; color: string; count: number; charge?: string }[];
+      productsMolecules: { formula: string; name: string; structure: string; count: number }[];
+    };
   };
 
   // Code Workbench Data
@@ -107,6 +143,35 @@ export interface RepresentationPayload {
     callStack: string[];
     variables: { name: string; value: string; type: string }[];
     executionSteps: { line: number; variablesState: Record<string, any>; log?: string }[];
+  };
+
+  // Universal Scenario Simulation Data (ANY Domain)
+  scenarioData?: {
+    scenarioTitle: string;
+    environment?: 'studio' | 'space' | 'laboratory' | 'nature' | 'cyber' | 'microscopic' | 'blueprint' | string;
+    entities: {
+      id: string;
+      name: string;
+      shape: 'sphere' | 'cube' | 'cylinder' | 'cone' | 'rocket' | 'atom' | 'ring' | 'wave' | 'particle_cloud' | 'custom' | string;
+      color: string;
+      size: number;
+      position: { x: number; y: number; z: number };
+      speed?: number;
+      glowing?: boolean;
+    }[];
+    steps: {
+      stepNumber: number;
+      title: string;
+      description: string;
+      narrationText: string;
+      cameraView: 'wide' | 'close_up' | 'top_view' | 'microscopic_zoom' | 'cinematic';
+      activeEntityId?: string;
+      animationAction?: string;
+      particleEffect?: 'none' | 'fire_smoke' | 'sparks' | 'water_bubbles' | 'energy_waves' | 'light_beam' | 'glow_aura' | 'atomic_particles' | string;
+      readoutData?: { label: string; value: string; color?: string }[];
+    }[];
+    observations?: string[];
+    takeawayConclusion?: string;
   };
 
   // Diagram Data

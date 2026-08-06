@@ -15,17 +15,18 @@ import { AlgorithmVisualizer }   from './components/representations/AlgorithmVis
 import { ChemistryLabView }      from './components/representations/ChemistryLabView';
 import { CodeWorkbenchView }     from './components/representations/CodeWorkbenchView';
 import { InteractiveDiagramView }from './components/representations/InteractiveDiagramView';
-import { RichKnowledgeView }     from './components/representations/RichKnowledgeView';
+import { UniversalScenarioSimulator } from './components/representations/UniversalScenarioSimulator';
+import { UniversalSimulationGenerator } from './services/universalSimulationGenerator';
 
 export const App: React.FC = () => {
   const [state, setState] = useState<WorkbenchState>({
     mode: 'voice_only',
     isListening: true,
     isCameraActive: false,
-    activePayload: null,
+    activePayload: UniversalSimulationGenerator.getSpaceRocketPreset(),
     objectHierarchy: [],
-    history: [],
-    historyIndex: -1,
+    history: [UniversalSimulationGenerator.getSpaceRocketPreset()],
+    historyIndex: 0,
     speechTranscript: '',
     interimTranscript: '',
     detectedGesture: 'Hands-free Ready',
@@ -47,14 +48,13 @@ export const App: React.FC = () => {
 
   // Initial welcome scene — runs once on mount
   useEffect(() => {
-    AIRouterService.processInput('Create a chemistry laboratory', null, []).then((payload) => {
-      setState((prev) => ({
-        ...prev,
-        activePayload: payload,
-        history: [payload],
-        historyIndex: 0,
-      }));
-    });
+    const initialPayload = UniversalSimulationGenerator.getSpaceRocketPreset();
+    setState((prev) => ({
+      ...prev,
+      activePayload: initialPayload,
+      history: [initialPayload],
+      historyIndex: 0,
+    }));
   }, []); // empty deps: intentionally runs once
 
   // ── Final command handler ────────────────────────────────────────────────
@@ -169,16 +169,17 @@ export const App: React.FC = () => {
     if (!state.activePayload) return null;
     if (isARMode)              return null;
 
+    if (state.activePayload.scenarioData || state.activePayload.type === '3d_scene' || state.activePayload.type === 'chemistry_lab') {
+      return <UniversalScenarioSimulator payload={state.activePayload} />;
+    }
+
     switch (state.activePayload.type) {
-      case '3d_scene':          return <ThreeDWorkbench payload={state.activePayload} />;
       case 'physics_simulation':return <PhysicsSimulator payload={state.activePayload} />;
       case 'math_derivation':   return <MathDerivationView payload={state.activePayload} />;
       case 'algorithm_visualizer': return <AlgorithmVisualizer payload={state.activePayload} />;
-      case 'chemistry_lab':     return <ChemistryLabView payload={state.activePayload} />;
       case 'code_workbench':    return <CodeWorkbenchView payload={state.activePayload} />;
       case 'interactive_diagram': return <InteractiveDiagramView payload={state.activePayload} />;
-      case 'rich_knowledge':    return <RichKnowledgeView payload={state.activePayload} />;
-      default:                  return <RichKnowledgeView payload={state.activePayload} />;
+      default:                  return <UniversalScenarioSimulator payload={state.activePayload} />;
     }
   };
 

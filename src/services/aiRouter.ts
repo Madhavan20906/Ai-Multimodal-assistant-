@@ -1,5 +1,7 @@
 import { RepresentationPayload, DomainCategory, SceneObject } from '../types';
 import { GroqService } from './groqService';
+import { ChemistrySimulationGenerator } from './chemistrySimulationGenerator';
+import { UniversalSimulationGenerator } from './universalSimulationGenerator';
 
 /**
  * Intelligent Representation Engine & Workbench Router
@@ -18,23 +20,26 @@ export class AIRouterService {
     const text = input.trim().toLowerCase();
 
     // 1. Fast-path: incremental modifications to an active 3D scene
-    if (currentPayload && currentPayload.type === '3d_scene') {
+    // Only intercept colour/size/fill tweaks — NOT full new topic requests
+    const isFullNewRequest = text.length > 15 && !text.startsWith('make') && !text.startsWith('change') && !text.startsWith('fill') && !text.startsWith('paint') && !text.startsWith('set');
+    if (!isFullNewRequest && currentPayload && currentPayload.type === '3d_scene') {
       const updated = this.handle3DIncrementalUpdate(text, currentPayload);
       if (updated) return updated;
     }
 
     // 2. Fast-path: incremental modifications to an active chemistry lab
-    if (currentPayload && currentPayload.type === 'chemistry_lab') {
+    if (!isFullNewRequest && currentPayload && currentPayload.type === 'chemistry_lab') {
       const updated = this.handleChemistryIncrementalUpdate(text, currentPayload);
       if (updated) return updated;
     }
 
-    // 3. AI-powered routing via Groq
+    // 3. AI-powered routing via Groq (primary path)
     try {
       return await this.groqRoute(input);
     } catch (e) {
-      console.warn('[AIRouter] Groq unavailable, falling back to keyword routing:', e);
-      return this.routeToBestRepresentation(input, currentPayload, existingObjects);
+      console.warn('[AIRouter] Groq unavailable — using Universal Simulation Generator:', e);
+      // Always generate a real scenario from the user's input, never stay stuck on a preset
+      return UniversalSimulationGenerator.createScenario(input);
     }
   }
 
@@ -43,21 +48,43 @@ export class AIRouterService {
    * All generators except physics/algorithm/diagram call Groq for dynamic content.
    */
   private static async groqRoute(rawInput: string): Promise<RepresentationPayload> {
+    const lower = rawInput.toLowerCase();
+    const isScenarioQuery = lower.startsWith('simulate') ||
+                            lower.startsWith('show') ||
+                            lower.startsWith('how does') ||
+                            lower.startsWith('visualize') ||
+                            lower.startsWith('demonstrate') ||
+                            lower.includes('piston') ||
+                            lower.includes('engine') ||
+                            lower.includes('rocket') ||
+                            lower.includes('orbit') ||
+                            lower.includes('planet') ||
+                            lower.includes('collision') ||
+                            lower.includes('dna') ||
+                            lower.includes('photosynthesis') ||
+                            lower.includes('volcano') ||
+                            lower.includes('earthquake') ||
+                            lower.includes('pendulum') ||
+                            lower.includes('chemical reaction') ||
+                            lower.includes('reaction');
+
+    if (isScenarioQuery) {
+      return GroqService.generateDynamicScenario(rawInput);
+    }
+
     const { representationType, domain } = await GroqService.classify(rawInput);
 
     switch (representationType) {
       case '3d_scene':
-        return GroqService.generate3DScene(rawInput);
       case 'chemistry_lab':
-        return GroqService.generateChemistry(rawInput);
+      case 'physics_simulation':
+        return GroqService.generateDynamicScenario(rawInput);
       case 'math_derivation':
         return GroqService.generateMath(rawInput);
       case 'code_workbench':
         return GroqService.generateCode(rawInput);
       case 'algorithm_visualizer':
         return this.generateAlgorithmPayload(rawInput);
-      case 'physics_simulation':
-        return this.generatePhysicsPayload(rawInput);
       case 'interactive_diagram':
         return this.generateDiagramByDomain(rawInput, domain);
       case 'rich_knowledge':
@@ -515,57 +542,12 @@ export class AIRouterService {
       };
     }
 
-    // Default: Water Bottle
-    return {
-      type: '3d_scene',
-      domain: 'General',
-      title: 'Interactive 3D Water Bottle Container',
-      subtitle: 'Physical Liquid Mesh Simulation',
-      summaryText: 'High-precision 3D container object supporting fluid level state, color customization, and gesture grabbing.',
-      voiceNarrationText: 'Generated water bottle. Spoken instructions like "fill it to 80%" will update fluid level live.',
-      threeDData: {
-        primaryObject: 'water_bottle',
-        environment: 'lab',
-        objects: [
-          {
-            id: 'bottle_1',
-            name: 'Hydro Container',
-            type: 'bottle',
-            properties: { color: '#06b6d4', fillLevel: 0, size: 1.0, state: 'Empty' },
-          },
-        ],
-      },
-    };
+    // Default: Universal Scenario Generator for ANY topic or prompt
+    return UniversalSimulationGenerator.createScenario(rawInput);
   }
 
   private static generateChemistryPayload(rawInput: string): RepresentationPayload {
-    return {
-      type: 'chemistry_lab',
-      domain: 'Chemistry',
-      title: 'Virtual Chemistry Laboratory Workbench',
-      subtitle: 'Acid-Base Neutralization Experiment',
-      summaryText: 'Simulating the stoichiometric reaction between Hydrochloric Acid (HCl) and Sodium Hydroxide (NaOH).',
-      voiceNarrationText: 'Welcome to the Virtual Chemistry Laboratory. HCl and NaOH bottles are placed on your workbench. Speak "Mix them" to animate.',
-      chemData: {
-        reactants: [
-          { formula: 'HCl', name: 'Hydrochloric Acid', color: '#ef4444' },
-          { formula: 'NaOH', name: 'Sodium Hydroxide', color: '#3b82f6' },
-        ],
-        products: [
-          { formula: 'NaCl', name: 'Sodium Chloride (Salt)', color: '#10b981' },
-          { formula: 'H₂O', name: 'Water', color: '#60a5fa' },
-        ],
-        balancedEquation: 'HCl(aq) + NaOH(aq) → NaCl(aq) + H₂O(l)',
-        observations: [
-          'Exothermic neutralization reaction releases ~57.1 kJ/mol heat.',
-          'Colorless solution forms aqueous sodium and chloride ions.',
-          'pH transitions from acidic (pH 1.0) / basic (pH 13.0) to neutral (pH 7.0).',
-        ],
-        reactionType: 'Acid-Base Neutralization',
-        isAnimated: false,
-        temperatureChange: '+14.2°C',
-      },
-    };
+    return ChemistrySimulationGenerator.createSimulation(rawInput);
   }
 
   private static generateMathPayload(rawInput: string): RepresentationPayload {

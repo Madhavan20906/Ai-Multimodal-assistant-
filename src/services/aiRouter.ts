@@ -1,15 +1,14 @@
 import { RepresentationPayload, DomainCategory, SceneObject } from '../types';
+import { GroqService } from './groqService';
 
 /**
  * Intelligent Representation Engine & Workbench Router
  * Converts natural spoken language or text input into the optimal visual representation.
+ * Uses Groq LLM for domain classification and knowledge generation.
  */
 export class AIRouterService {
-  private static apiKey: string = '';
-
-  public static setApiKey(key: string) {
-    this.apiKey = key;
-  }
+  /** @deprecated API key is now managed server-side via the Groq proxy middleware */
+  public static setApiKey(_key: string) {}
 
   public static async processInput(
     input: string,
@@ -18,24 +17,89 @@ export class AIRouterService {
   ): Promise<RepresentationPayload> {
     const text = input.trim().toLowerCase();
 
-    // 1. Check for Incremental Modifications / Corrections to existing 3D/Scene state
+    // 1. Fast-path: incremental modifications to an active 3D scene
     if (currentPayload && currentPayload.type === '3d_scene') {
       const updated = this.handle3DIncrementalUpdate(text, currentPayload);
       if (updated) return updated;
     }
 
-    // 2. Check for Incremental Modifications to Chemistry Lab
+    // 2. Fast-path: incremental modifications to an active chemistry lab
     if (currentPayload && currentPayload.type === 'chemistry_lab') {
       const updated = this.handleChemistryIncrementalUpdate(text, currentPayload);
       if (updated) return updated;
     }
 
-    // 3. Domain & Intent Classification Router
-    return this.routeToBestRepresentation(input, currentPayload, existingObjects);
+    // 3. AI-powered routing via Groq
+    try {
+      return await this.groqRoute(input);
+    } catch (e) {
+      console.warn('[AIRouter] Groq unavailable, falling back to keyword routing:', e);
+      return this.routeToBestRepresentation(input, currentPayload, existingObjects);
+    }
   }
 
   /**
-   * Universal Router: Determines optimal representation type based on input context
+   * Groq-powered router: classify domain then dispatch to the right generator.
+   */
+  private static async groqRoute(rawInput: string): Promise<RepresentationPayload> {
+    const { representationType, domain } = await GroqService.classify(rawInput);
+
+    switch (representationType) {
+      case '3d_scene':
+        return this.generate3DScenePayload(rawInput);
+      case 'chemistry_lab':
+        return this.generateChemistryPayload(rawInput);
+      case 'math_derivation':
+        return this.generateMathPayload(rawInput);
+      case 'algorithm_visualizer':
+        return this.generateAlgorithmPayload(rawInput);
+      case 'code_workbench':
+        return this.generateCodePayload(rawInput);
+      case 'physics_simulation':
+        return this.generatePhysicsPayload(rawInput);
+      case 'interactive_diagram':
+        return this.generateDiagramByDomain(rawInput, domain);
+      case 'rich_knowledge':
+      default:
+        return this.groqKnowledgePayload(rawInput);
+    }
+  }
+
+  /**
+   * Pick the right diagram variant based on Groq's domain classification.
+   */
+  private static generateDiagramByDomain(
+    rawInput: string,
+    domain: DomainCategory
+  ): RepresentationPayload {
+    switch (domain) {
+      case 'Machine Learning': return this.generateMLDiagramPayload(rawInput);
+      case 'Networking':       return this.generateNetworkDiagramPayload(rawInput);
+      case 'Biology':          return this.generateBiologyDiagramPayload(rawInput);
+      case 'History':
+      case 'Geography':        return this.generateHistoryGeographyPayload(rawInput);
+      default:                 return this.generateMLDiagramPayload(rawInput);
+    }
+  }
+
+  /**
+   * Call Groq to generate a real AI answer for general knowledge queries.
+   */
+  private static async groqKnowledgePayload(rawInput: string): Promise<RepresentationPayload> {
+    const knowledge = await GroqService.generateKnowledge(rawInput);
+    return {
+      type: 'rich_knowledge',
+      domain: knowledge.domain ?? 'General',
+      title: knowledge.title,
+      subtitle: knowledge.subtitle,
+      summaryText: knowledge.summaryText,
+      voiceNarrationText: knowledge.voiceNarrationText,
+      keyPoints: knowledge.keyPoints,
+    };
+  }
+
+  /**
+   * Keyword-based fallback router (used when Groq is unavailable).
    */
   private static routeToBestRepresentation(
     rawInput: string,

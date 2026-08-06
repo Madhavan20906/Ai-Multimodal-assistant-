@@ -1,12 +1,14 @@
 import React from 'react';
 import { RepresentationPayload } from '../../types';
-import { BookOpen, Globe, Check, Award, Compass } from 'lucide-react';
+import { BookOpen, Globe, Check, Award, Compass, Cpu } from 'lucide-react';
 
 interface RichKnowledgeViewProps {
   payload: RepresentationPayload;
 }
 
 export const RichKnowledgeView: React.FC<RichKnowledgeViewProps> = ({ payload }) => {
+  const hasGroqPoints = payload.keyPoints && payload.keyPoints.length > 0;
+
   return (
     <div className="representation-card rich-knowledge-card">
       <div className="card-header">
@@ -18,7 +20,11 @@ export const RichKnowledgeView: React.FC<RichKnowledgeViewProps> = ({ payload })
           </div>
         </div>
 
-        <span className="info-badge knowledge-tag"><Globe size={12} /> Direct Knowledge Answer</span>
+        <span className="info-badge knowledge-tag">
+          {hasGroqPoints
+            ? <><Cpu size={12} /> Groq AI Answer</>
+            : <><Globe size={12} /> Knowledge Answer</>}
+        </span>
       </div>
 
       <div className="rich-knowledge-body">
@@ -30,32 +36,41 @@ export const RichKnowledgeView: React.FC<RichKnowledgeViewProps> = ({ payload })
           <div className="metric-card">
             <div className="card-icon"><Award size={18} /></div>
             <div>
-              <span className="metric-label">Key Entity</span>
-              <strong className="metric-val">{payload.title.split(':')[1] || payload.title}</strong>
+              <span className="metric-label">Topic</span>
+              <strong className="metric-val">{payload.title.split(':')[1]?.trim() || payload.title}</strong>
             </div>
           </div>
 
           <div className="metric-card">
             <div className="card-icon"><Compass size={18} /></div>
             <div>
-              <span className="metric-label">Domain Scope</span>
+              <span className="metric-label">Domain</span>
               <strong className="metric-val">{payload.domain}</strong>
             </div>
           </div>
         </div>
 
         <div className="insights-box">
-          <h4>Core Takeaways & Analytical Context</h4>
+          <h4>{hasGroqPoints ? 'Key Insights' : 'Core Takeaways'}</h4>
           <ul>
-            <li><Check size={14} className="check-icon" /> Evaluated directly by AURA Representation Router based on factual intent.</li>
-            <li><Check size={14} className="check-icon" /> Textual representation selected to maximize clarity and avoid redundant graphics.</li>
-            <li><Check size={14} className="check-icon" /> Real-time Speech Synthesis (TTS) narration generated.</li>
+            {hasGroqPoints
+              ? payload.keyPoints!.map((point, i) => (
+                  <li key={i}>
+                    <Check size={14} className="check-icon" /> {point}
+                  </li>
+                ))
+              : (
+                <>
+                  <li><Check size={14} className="check-icon" /> AI classification selected this knowledge format for your query.</li>
+                  <li><Check size={14} className="check-icon" /> Voice narration has been generated for TTS playback.</li>
+                </>
+              )}
           </ul>
         </div>
       </div>
 
       <div className="card-footer">
-        <p>Continuous Multimodal Workbench Context Active.</p>
+        <p>{hasGroqPoints ? 'Powered by Groq · llama-3.3-70b-versatile' : 'Continuous Multimodal Workbench Context Active.'}</p>
       </div>
     </div>
   );

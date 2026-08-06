@@ -40,21 +40,22 @@ export class AIRouterService {
 
   /**
    * Groq-powered router: classify domain then dispatch to the right generator.
+   * All generators except physics/algorithm/diagram call Groq for dynamic content.
    */
   private static async groqRoute(rawInput: string): Promise<RepresentationPayload> {
     const { representationType, domain } = await GroqService.classify(rawInput);
 
     switch (representationType) {
       case '3d_scene':
-        return this.generate3DScenePayload(rawInput);
+        return GroqService.generate3DScene(rawInput);
       case 'chemistry_lab':
-        return this.generateChemistryPayload(rawInput);
+        return GroqService.generateChemistry(rawInput);
       case 'math_derivation':
-        return this.generateMathPayload(rawInput);
+        return GroqService.generateMath(rawInput);
+      case 'code_workbench':
+        return GroqService.generateCode(rawInput);
       case 'algorithm_visualizer':
         return this.generateAlgorithmPayload(rawInput);
-      case 'code_workbench':
-        return this.generateCodePayload(rawInput);
       case 'physics_simulation':
         return this.generatePhysicsPayload(rawInput);
       case 'interactive_diagram':

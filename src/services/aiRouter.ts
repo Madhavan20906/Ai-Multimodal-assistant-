@@ -49,6 +49,7 @@ export class AIRouterService {
                             lower.startsWith('how does') ||
                             lower.startsWith('visualize') ||
                             lower.startsWith('demonstrate') ||
+                            lower.includes('scenario') ||
                             lower.includes('piston') ||
                             lower.includes('engine') ||
                             lower.includes('rocket') ||
@@ -61,7 +62,19 @@ export class AIRouterService {
                             lower.includes('earthquake') ||
                             lower.includes('pendulum') ||
                             lower.includes('chemical reaction') ||
-                            lower.includes('reaction');
+                            lower.includes('reaction') ||
+                            lower.includes('car') ||
+                            lower.includes('water bottle') ||
+                            lower.includes('bottle') ||
+                            lower.includes('heart') ||
+                            lower.includes('blood') ||
+                            lower.includes('solar panel') ||
+                            lower.includes('airplane') ||
+                            lower.includes('drone') ||
+                            lower.includes('wind turbine') ||
+                            lower.includes('robot arm') ||
+                            lower.includes('magnet') ||
+                            lower.includes('black hole');
 
     if (isScenarioQuery) {
       return GroqService.generateDynamicScenario(rawInput);

@@ -1450,10 +1450,10 @@ function drawEntitiesAndParticles(
         ctx.lineWidth = 1;
 
         ctx.beginPath();
-        ctx.moveTo(projected[f[0]].x, projected[f[0]].y);
-        ctx.lineTo(projected[f[1]].x, projected[f[1]].y);
-        ctx.lineTo(projected[f[2]].x, projected[f[2]].y);
-        ctx.lineTo(projected[f[3]].x, projected[f[3]].y);
+        ctx.moveTo(projected[f[0] as number].x, projected[f[0] as number].y);
+        ctx.lineTo(projected[f[1] as number].x, projected[f[1] as number].y);
+        ctx.lineTo(projected[f[2] as number].x, projected[f[2] as number].y);
+        ctx.lineTo(projected[f[3] as number].x, projected[f[3] as number].y);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();

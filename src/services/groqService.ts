@@ -308,19 +308,30 @@ Choose a suitable environment:
 - "studio" → general physics, optics, waves (default)
 
 Design 2 to 4 entities. Pick the BEST shape for domain accuracy:
-- "rocket" → launch vehicles, spacecraft, boosters (draws Saturn V style with fins, nose cone, engine flame)
-- "planet" → planets, moons, celestial bodies (draws sphere with bands, atmosphere glow, optional rings)
-- "atom" → elements, molecules, quantum states (draws nucleus cluster + 3 electron orbital shells)
-- "piston" → engines, thermodynamics, mechanics (draws full reciprocating piston with crankshaft)
-- "dna" → genetics, biology, molecular biology (draws rotating double helix with colored base pairs)
-- "chloroplast" → photosynthesis, plant biology, cells (draws hexagonal cell with thylakoid stacks)
-- "volcano" → geology, plate tectonics, earth science (draws erupting mountain with lava particles)
-- "prism" → optics, light, wavelengths, refraction (draws glass triangle with rainbow dispersion rays)
-- "gear" → mechanical engineering, machines, robotics (draws 10-tooth mechanical gear with axle)
-- "circuit" → electronics, electricity, Ohm's law (draws battery + resistor loop with flowing electrons)
-- "wave" → physics waves, sound, electromagnetic (draws dual interfering sine waves with nodes)
-- "cube" → 3D geometry, crystal structures (draws rotating projected 3D cube with faces)
-- "sphere" → general objects, balls, planets (draws shiny sphere with specular highlight)
+- "car" → vehicles, automobiles, sports cars, engines
+- "water_bottle" → liquids, fluids, pouring, hydration
+- "heart" → cardiac, blood circulation, anatomy, pulse
+- "solar_panel" → solar energy, photovoltaics, renewable power
+- "airplane" → aerodynamics, flight, wings, jet aviation
+- "drone" → quadcopters, multirotors, hover flight
+- "wind_turbine" → wind energy, clean power generators
+- "robot_arm" → robotics, industrial automation, kinematic joints
+- "magnet" → magnetism, magnetic field lines, Lorentz force
+- "earthquake" → seismic waves, tectonic fault lines
+- "black_hole" → event horizons, gravitational lensing, accretion disks
+- "rocket" → launch vehicles, spacecraft, boosters
+- "planet" → celestial bodies, moons, orbits
+- "atom" → physics, molecules, nuclear states
+- "piston" → engines, thermodynamics, mechanical strokes
+- "dna" → genetics, double helix, biology
+- "chloroplast" → plant cells, photosynthesis
+- "volcano" → geology, magma eruption
+- "prism" → optics, light dispersion, refraction
+- "gear" → mechanical gearboxes, robotics
+- "circuit" → electronics, microchips, current
+- "wave" → physics oscillations, sound, electromagnetic waves
+- "cube" → structural blocks, geometry
+- "sphere" → generic spheres, particles, spheres
 
 Design a continuous sequence of 5 to 7 animated steps. Each step specifies:
 - title: "STEP N: Short Action Title"

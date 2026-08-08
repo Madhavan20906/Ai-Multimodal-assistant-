@@ -247,16 +247,16 @@ export const CameraHandTracker: React.FC<CameraHandTrackerProps> = ({
         });
 
         hands.setOptions({
-          maxNumHands: 1,
+          maxNumHands: 2,
           modelComplexity: 1,
-          minDetectionConfidence: 0.7,
-          minTrackingConfidence: 0.6,
+          minDetectionConfidence: 0.6,
+          minTrackingConfidence: 0.5,
         });
 
         hands.onResults(handleHandResults);
         handsRef.current = hands;
         if (!cancelled) setMpReady(true);
-        console.log('[CameraHandTracker] MediaPipe Hands ready');
+        console.log('[CameraHandTracker] MediaPipe Hands ready (Dual Hand Enabled)');
       } catch (err) {
         console.warn('[CameraHandTracker] MediaPipe init failed, using mouse fallback:', err);
         setDetectedGesture('Mouse Mode');
@@ -305,39 +305,46 @@ export const CameraHandTracker: React.FC<CameraHandTrackerProps> = ({
       return;
     }
 
-    const landmarks = results.multiHandLandmarks[0];
     const W = hCanvas.width;
     const H = hCanvas.height;
+    const detectedLabels: string[] = [];
 
-    // Draw skeleton connections
-    ctx.strokeStyle = 'rgba(6, 182, 212, 0.8)';
-    ctx.lineWidth = 2;
-    HAND_CONNECTIONS.forEach(([a, b]) => {
-      ctx.beginPath();
-      ctx.moveTo(landmarks[a].x * W, landmarks[a].y * H);
-      ctx.lineTo(landmarks[b].x * W, landmarks[b].y * H);
-      ctx.stroke();
+    // Loop through ALL detected hands (Up to 2 hands)
+    results.multiHandLandmarks.forEach((landmarks, handIdx) => {
+      const colorHue = handIdx === 0 ? 'rgba(6, 182, 212, 0.8)' : 'rgba(236, 72, 153, 0.8)';
+      const tipColor = handIdx === 0 ? '#a855f7' : '#f59e0b';
+
+      // Draw skeleton connections for this hand
+      ctx.strokeStyle = colorHue;
+      ctx.lineWidth = 2.5;
+      HAND_CONNECTIONS.forEach(([a, b]) => {
+        ctx.beginPath();
+        ctx.moveTo(landmarks[a].x * W, landmarks[a].y * H);
+        ctx.lineTo(landmarks[b].x * W, landmarks[b].y * H);
+        ctx.stroke();
+      });
+
+      // Draw landmark dots
+      landmarks.forEach((lm, i) => {
+        const isTip = [4, 8, 12, 16, 20].includes(i);
+        ctx.beginPath();
+        ctx.arc(lm.x * W, lm.y * H, isTip ? 6 : 4, 0, Math.PI * 2);
+        ctx.fillStyle = isTip ? tipColor : colorHue;
+        ctx.fill();
+      });
+
+      // Classify gesture for primary hand and secondary hand
+      const gesture = classifyGesture(landmarks);
+      detectedLabels.push(`H${handIdx + 1}: ${gestureLabelFor(gesture.name)}`);
+
+      if (handIdx === 0) {
+        lastGestureRef.current = gesture;
+        onGestureDetected?.(gesture.name, { x: gesture.x, y: gesture.y });
+        applyGestureInteraction(gesture);
+      }
     });
 
-    // Draw landmark dots
-    landmarks.forEach((lm, i) => {
-      const isTip = [4, 8, 12, 16, 20].includes(i);
-      ctx.beginPath();
-      ctx.arc(lm.x * W, lm.y * H, isTip ? 6 : 4, 0, Math.PI * 2);
-      ctx.fillStyle = isTip ? '#a855f7' : 'rgba(6, 182, 212, 0.9)';
-      ctx.fill();
-    });
-
-    // Classify gesture
-    const gesture = classifyGesture(landmarks);
-    lastGestureRef.current = gesture;
-    setDetectedGesture(gestureLabelFor(gesture.name));
-
-    // Fire external callback
-    onGestureDetected?.(gesture.name, { x: gesture.x, y: gesture.y });
-
-    // Gesture → AR object interaction
-    applyGestureInteraction(gesture);
+    setDetectedGesture(detectedLabels.join(' | '));
   }, [onGestureDetected]);
 
   // ── 7. Map gesture to 3D object interaction ─────────────────────────────
@@ -580,12 +587,86 @@ function buildARObject(
       group.add(glass);
     }
 
+  } else if (type === 'rocket' || type === 'saturn') {
+    // 🚀 3D Saturn V Booster Rocket
+    const body = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.4, 0.45, 2.8, 32),
+      new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.2, metalness: 0.8 })
+    );
+    group.add(body);
+
+    const nose = new THREE.Mesh(
+      new THREE.ConeGeometry(0.4, 0.9, 32),
+      new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.3 })
+    );
+    nose.position.y = 1.85;
+    group.add(nose);
+
+    // Rocket flame ring
+    const flame = new THREE.Mesh(
+      new THREE.ConeGeometry(0.35, 1.0, 16),
+      new THREE.MeshStandardMaterial({ color: 0xf97316, emissive: 0xf97316, emissiveIntensity: 2.0, transparent: true, opacity: 0.85 })
+    );
+    flame.rotation.x = Math.PI;
+    flame.position.y = -1.9;
+    group.add(flame);
+
+  } else if (type === 'heart') {
+    // 🫀 3D Anatomical Heart Sphere Cluster
+    const atrium = new THREE.Mesh(
+      new THREE.SphereGeometry(0.8, 24, 24),
+      new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.4 })
+    );
+    atrium.position.y = 0.2;
+    group.add(atrium);
+
+    const aorta = new THREE.Mesh(
+      new THREE.TorusGeometry(0.4, 0.12, 16, 32, Math.PI),
+      new THREE.MeshStandardMaterial({ color: 0x3b82f6, metalness: 0.3 })
+    );
+    aorta.position.set(0, 0.8, 0);
+    group.add(aorta);
+
+  } else if (type === 'atom') {
+    // ⚛️ 3D Atomic Nucleus & Orbital Rings
+    const nucleus = new THREE.Mesh(
+      new THREE.SphereGeometry(0.5, 32, 32),
+      new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.8 })
+    );
+    group.add(nucleus);
+
+    [0, Math.PI / 3, (2 * Math.PI) / 3].forEach((angle) => {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(1.4, 0.03, 16, 64),
+        new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x06b6d4, emissiveIntensity: 1.5 })
+      );
+      ring.rotation.x = angle;
+      ring.rotation.y = angle * 0.5;
+      group.add(ring);
+    });
+
+  } else if (type === 'solar_panel' || type === 'airplane' || type === 'wing') {
+    // 🛩️ Aerodynamic Wing / Solar Panel Surface
+    const panel = new THREE.Mesh(
+      new THREE.BoxGeometry(3.0, 0.1, 1.6),
+      new THREE.MeshStandardMaterial({ color: 0x1e3a5f, roughness: 0.1, metalness: 0.9 })
+    );
+    group.add(panel);
+
   } else {
-    // Generic sphere
-    group.add(new THREE.Mesh(
-      new THREE.SphereGeometry(1.2, 32, 32),
-      new THREE.MeshStandardMaterial({ color, roughness: 0.35, metalness: 0.5 })
-    ));
+    // Generic High-Tech Glowing Sphere
+    const sphere = new THREE.Mesh(
+      new THREE.SphereGeometry(1.1, 32, 32),
+      new THREE.MeshStandardMaterial({ color, roughness: 0.25, metalness: 0.6 })
+    );
+    group.add(sphere);
+
+    const aura = new THREE.Mesh(
+      new THREE.TorusGeometry(1.4, 0.04, 16, 48),
+      new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x06b6d4, emissiveIntensity: 1.8 })
+    );
+    aura.rotation.x = Math.PI / 3;
+    group.add(aura);
   }
 
   group.scale.setScalar(sizeScale);

@@ -94,14 +94,21 @@ export function classifyGesture(
     name = 'OPEN_PALM';
   } else if (indexExt && !middleExt && !ringExt && !pinkyExt) {
     name = 'POINT';
-  } else if (!indexExt && !middleExt && !ringExt && !pinkyExt) {
-    // Thumb up: thumb clearly above index MCP while fingers curled
-    if (thumbTip.y < indexMcp.y - 0.06) {
-      name = 'THUMBS_UP';
-    }
+  } else if (thumbTip.y < indexMcp.y - 0.06 && !indexExt && !middleExt && !ringExt && !pinkyExt) {
+    name = 'THUMBS_UP';
   }
 
   return { name, x: cx, y: cy, pinchDistance, landmarks };
+}
+
+/**
+ * Classify multiple hands simultaneously for dual-hand interaction.
+ */
+export function classifyMultipleGestures(
+  multiLandmarks: { x: number; y: number; z: number }[][]
+): GestureResult[] {
+  if (!multiLandmarks || !multiLandmarks.length) return [];
+  return multiLandmarks.map(lm => classifyGesture(lm));
 }
 
 /** Human-readable label shown in the HUD badge */
@@ -115,3 +122,4 @@ export function gestureLabelFor(name: GestureName): string {
     default:           return '✋ Tracking';
   }
 }
+

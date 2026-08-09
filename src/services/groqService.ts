@@ -77,40 +77,84 @@ Return ONLY valid JSON: {"representationType":"...","domain":"..."}`,
     return JSON.parse(raw) as GroqClassification;
   }
 
+  // ─── Physical object query detector ───────────────────────────────────────
+
+  /** Returns true if the input looks like a request to spawn a real-world object in AR */
+  static isPhysicalObjectQuery(lower: string): boolean {
+    const physicalKeywords = [
+      'bag','backpack','purse','luggage','suitcase',
+      'phone','smartphone','mobile','iphone',
+      'laptop','macbook','notebook',
+      'chair','sofa','couch','stool','bench',
+      'shoe','sneaker','boot','sandal',
+      'watch','smartwatch','timepiece',
+      'tree','plant','flower','cactus','bonsai',
+      'crown','hat','helmet','tiara',
+      'cup','mug','vase','jar','flask',
+      'book','keyboard','mouse','speaker','headphone',
+      'guitar','piano','drum',
+      'sword','shield','axe','dagger',
+      'diamond','gem','crystal',
+      'fish','bird','cat','dog','lion','tiger',
+      'bicycle','motorcycle','truck','bus','train','submarine',
+      'airplane','helicopter','drone','jet',
+    ];
+    return physicalKeywords.some(kw => lower.includes(kw));
+  }
+
   // ─── 3D Scene generator ────────────────────────────────────────────────────
 
   /**
    * Map any physical-object description to a 3D scene payload.
-   * Available renderers: car, building, water_bottle, solar_system (+ generic sphere).
+   * Supports: bag, phone, laptop, chair, shoe, watch, tree, cup, crown, etc.
    */
   static async generate3DScene(input: string): Promise<RepresentationPayload> {
     const raw = await GroqService.chat([
       {
         role: 'system',
-        content: `You generate 3D scene data for AURA Workbench based on user descriptions.
+        content: `You generate 3D AR object data for AURA Workbench based on user descriptions.
 
-Available primaryObject values (pick the closest match):
-- "car"          → any vehicle: sports car, truck, racing car, motorcycle-like, etc.
-- "building"     → any structure: house, skyscraper, tower, castle, bridge
-- "water_bottle" → any container or liquid object: bottle, flask, cup, jar
-- "solar_system" → space scenes: planets, stars, galaxies, orbits
+Available primaryObject values — pick the CLOSEST match to the user's described object:
+- "car"          → any vehicle: sports car, truck, racing car, bus, motorcycle
+- "building"     → any structure: house, skyscraper, tower, castle, bridge, office
+- "water_bottle" → any container: bottle, flask, cup, mug, jar, glass, vase
+- "bag"          → any bag: handbag, backpack, purse, luggage, suitcase, tote
+- "phone"        → any device: smartphone, mobile phone, tablet, phone
+- "laptop"       → any computer: laptop, MacBook, notebook, computer
+- "chair"        → any seating: chair, sofa, couch, stool, bench, throne
+- "shoe"         → any footwear: shoe, sneaker, boot, sandal, heel
+- "watch"        → any timepiece: watch, clock, smartwatch
+- "tree"         → any plant: tree, plant, flower, cactus, bonsai
+- "crown"        → any headwear or decorative: crown, hat, helmet, tiara
+- "rocket"       → any spacecraft or missile: rocket, missile, spaceship, shuttle
+- "heart"        → any anatomy: heart, brain, lungs, kidney, organ
+- "atom"         → any microscopic: atom, molecule, cell, DNA, crystal
+- "solar_panel"  → any flat panel or wing: solar panel, wing, surfboard, skateboard
+- "solar_system" → space scenes: solar system, planets, galaxy, orbit
+- "sphere"       → any round object: ball, globe, orb, ball, planet
 
-For color, output a valid CSS hex color matching the description (e.g. "red car" → "#ef4444", "blue car" → "#3b82f6", "golden" → "#f59e0b"). Default to "#06b6d4" if no color mentioned.
-
-environment options: "studio" (car/objects), "blueprint" (buildings), "lab" (bottles/chemistry), "space" (space), "grid" (default)
+For color, output a valid CSS hex color best matching the described object or any color hint in the prompt. Defaults:
+- bag → "#8B4513" (brown leather)
+- phone → "#1a1a2e" (black)
+- laptop → "#c0c0c0" (silver)
+- chair → "#8B4513" (wood brown)  
+- shoe → "#ffffff" (white sneaker)
+- watch → "#d4af37" (gold)
+- tree → "#22c55e" (green)
+- crown → "#f59e0b" (gold)
+- Otherwise → "#06b6d4"
 
 Return ONLY valid JSON:
 {
-  "primaryObject": "car"|"building"|"water_bottle"|"solar_system",
-  "environment": "studio"|"blueprint"|"lab"|"space"|"grid",
+  "primaryObject": "one of the values above",
+  "environment": "studio|blueprint|lab|space|grid|nature",
   "color": "#hexcolor",
   "size": 1.0,
-  "floors": 10,
-  "objectName": "Descriptive name of the specific object",
+  "objectName": "Descriptive human name of the specific object",
   "title": "Scene title (5-8 words)",
   "subtitle": "One-line description of the scene",
   "summaryText": "2 sentences describing what the user sees and can do with it.",
-  "voiceNarrationText": "Natural 1-2 sentence spoken description of the scene."
+  "voiceNarrationText": "Natural 1-2 sentence spoken description."
 }`,
       },
       { role: 'user', content: input },
@@ -120,18 +164,18 @@ Return ONLY valid JSON:
     return {
       type: '3d_scene',
       domain: 'Architecture',
-      title: d.title ?? `3D ${d.objectName ?? 'Scene'}`,
+      title: d.title ?? `3D ${d.objectName ?? 'Object'}`,
       subtitle: d.subtitle ?? d.objectName,
       summaryText: d.summaryText,
       voiceNarrationText: d.voiceNarrationText,
       threeDData: {
-        primaryObject: d.primaryObject ?? 'car',
+        primaryObject: d.primaryObject ?? 'sphere',
         environment: d.environment ?? 'studio',
         objects: [
           {
             id: `${d.primaryObject ?? 'obj'}_1`,
             name: d.objectName ?? d.title,
-            type: d.primaryObject ?? 'car',
+            type: d.primaryObject ?? 'sphere',
             properties: {
               color: d.color ?? '#06b6d4',
               size: d.size ?? 1.0,

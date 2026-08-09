@@ -33,7 +33,7 @@ export const UniversalScenarioSimulator: React.FC<UniversalScenarioSimulatorProp
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
-  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(false);
   const [cameraView, setCameraView] = useState<'wide' | 'close_up' | 'top_view' | 'microscopic_zoom' | 'cinematic'>('wide');
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [snapshotImage, setSnapshotImage] = useState<string | null>(null);
@@ -66,13 +66,10 @@ export const UniversalScenarioSimulator: React.FC<UniversalScenarioSimulatorProp
     }
   }, [currentStepIndex]);
 
-  // Speech Narration TTS
+  // Speech Narration TTS — Disabled (Voiceover turned off, speech recognition input stays active)
   useEffect(() => {
-    if (isAudioEnabled && currentStep.narrationText && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(currentStep.narrationText);
-      utterance.rate = 1.0 * playbackSpeed;
-      window.speechSynthesis.speak(utterance);
     }
   }, [currentStepIndex, isAudioEnabled]);
 

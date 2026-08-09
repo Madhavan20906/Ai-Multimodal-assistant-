@@ -1,7 +1,7 @@
 import { RepresentationPayload, DomainCategory, SceneObject } from '../types';
 import { GroqService } from './groqService';
-
 import { UniversalSimulationGenerator } from './universalSimulationGenerator';
+
 
 /**
  * Intelligent Representation Engine & Workbench Router
@@ -19,24 +19,117 @@ export class AIRouterService {
   ): Promise<RepresentationPayload> {
     const text = input.trim().toLowerCase();
 
-    // 1. Fast-path: incremental modifications to an active 3D scene
-    // Only intercept colour/size/fill tweaks — NOT full new topic requests
+    // ── 0. Remove / dismiss / clear the AR object ─────────────────────────
+    const isRemoveCommand =
+      text.startsWith('remove') ||
+      text.startsWith('dismiss') ||
+      text.startsWith('take away') ||
+      text.startsWith('get rid') ||
+      text.includes('remove the') ||
+      text.includes('clear the object') ||
+      text.includes('delete the') ||
+      text.includes('hide the') ||
+      (text.includes('remove') && text.includes('it'));
+
+    if (isRemoveCommand && currentPayload?.type === '3d_scene') {
+      return {
+        type: 'rich_knowledge',
+        domain: 'General',
+        title: 'AR Object Removed',
+        subtitle: 'Scene cleared',
+        summaryText: 'The AR object has been removed from the camera view.',
+        voiceNarrationText: 'Object removed.',
+        keyPoints: [],
+      };
+    }
+
+    // ── 1. "Bring me X" / "Show me X" / "Give me X" → AR object spawn ──────
+    const arObjectMatch = text.match(
+      /^(bring me|show me|give me|put|place|spawn|display|load|add|create|get me|i want to see)(\s+a?\s*|\s+an?\s*)(.+)$/i
+    );
+    if (arObjectMatch) {
+      const objectPhrase = arObjectMatch[3].trim();
+      console.log('[AIRouter] AR object spawn detected:', objectPhrase);
+      try {
+        return await GroqService.generate3DScene(`show me a ${objectPhrase}`);
+      } catch (e) {
+        console.warn('[AIRouter] generate3DScene fallback:', e);
+        return this.quickARObject(objectPhrase);
+      }
+    }
+
+    // ── 2. Fast-path: incremental modifications to an active 3D scene ──────
     const isFullNewRequest = text.length > 15 && !text.startsWith('make') && !text.startsWith('change') && !text.startsWith('fill') && !text.startsWith('paint') && !text.startsWith('set');
     if (!isFullNewRequest && currentPayload && currentPayload.type === '3d_scene') {
       const updated = this.handle3DIncrementalUpdate(text, currentPayload);
       if (updated) return updated;
     }
 
-
-    // 3. AI-powered routing via Groq (primary path)
+    // ── 3. AI-powered routing via Groq (primary path) ─────────────────────
     try {
       return await this.groqRoute(input);
     } catch (e) {
       console.warn('[AIRouter] Groq unavailable — using Universal Simulation Generator:', e);
-      // Always generate a real scenario from the user's input, never stay stuck on a preset
       return UniversalSimulationGenerator.createScenario(input);
     }
   }
+
+  /** Quick client-side fallback for AR object spawning without Groq */
+  private static quickARObject(phrase: string): RepresentationPayload {
+    const p = phrase.toLowerCase();
+    const objectMap: Array<[string[], string, string, string]> = [
+      [['bag','backpack','purse','luggage','suitcase','tote'],     'bag',         '#8B4513', 'Leather Bag'],
+      [['phone','smartphone','mobile','iphone','android'],         'phone',       '#1a1a2e', 'Smartphone'],
+      [['laptop','macbook','notebook','computer','pc'],            'laptop',      '#c0c0c0', 'Laptop'],
+      [['chair','sofa','couch','stool','bench','seat'],            'chair',       '#8B4513', 'Chair'],
+      [['shoe','sneaker','boot','sandal','heel','footwear'],       'shoe',        '#ffffff', 'Sneaker'],
+      [['watch','smartwatch','clock','timepiece'],                 'watch',       '#d4af37', 'Watch'],
+      [['tree','plant','flower','cactus','bonsai'],                'tree',        '#22c55e', 'Tree'],
+      [['crown','hat','helmet','tiara','cap'],                     'crown',       '#f59e0b', 'Crown'],
+      [['bottle','flask','cup','mug','glass','vase'],              'water_bottle','#06b6d4', 'Bottle'],
+      [['car','vehicle','truck','suv','sports car'],               'car',         '#ef4444', 'Sports Car'],
+      [['rocket','spaceship','spacecraft','missile'],              'rocket',      '#f8fafc', 'Rocket'],
+      [['heart','brain','organ','anatomy'],                        'heart',       '#ef4444', 'Heart'],
+      [['atom','molecule','crystal','dna'],                        'atom',        '#a855f7', 'Atom'],
+      [['building','house','tower','skyscraper','castle'],         'building',    '#38bdf8', 'Building'],
+      [['planet','solar system','galaxy','space'],                 'solar_system','#f59e0b', 'Solar System'],
+      [['ball','globe','orb','sphere'],                            'sphere',      '#06b6d4', 'Sphere'],
+    ];
+
+    for (const [keywords, type, color, name] of objectMap) {
+      if (keywords.some(k => p.includes(k))) {
+        return {
+          type: '3d_scene',
+          domain: 'Architecture',
+          title: `AR ${name}`,
+          subtitle: `3D ${name} — hand-controlled`,
+          summaryText: `Interactive 3D ${name} placed in AR. Grab and drag with your hand to move it, pinch to control.`,
+          voiceNarrationText: `Here is your ${name}. Grab it with your hand to move it around.`,
+          threeDData: {
+            primaryObject: type,
+            environment: 'studio',
+            objects: [{ id: `${type}_1`, name, type, properties: { color, size: 1.0 } }],
+          },
+        };
+      }
+    }
+
+    // Default generic sphere
+    return {
+      type: '3d_scene',
+      domain: 'Architecture',
+      title: `AR ${phrase}`,
+      subtitle: '3D Object — hand-controlled',
+      summaryText: `Interactive 3D object placed in AR. Grab and drag with your hand to move it.`,
+      voiceNarrationText: `Here is your ${phrase}. Grab it with your hand to move it around.`,
+      threeDData: {
+        primaryObject: 'sphere',
+        environment: 'studio',
+        objects: [{ id: 'obj_1', name: phrase, type: 'sphere', properties: { color: '#06b6d4', size: 1.0 } }],
+      },
+    };
+  }
+
 
   /**
    * Groq-powered router: classify domain then dispatch to the right generator.
@@ -78,6 +171,12 @@ export class AIRouterService {
 
     if (isScenarioQuery) {
       return GroqService.generateDynamicScenario(rawInput);
+    }
+
+    // Everyday physical object → spawn as AR 3D object
+    const isPhysicalObject = GroqService.isPhysicalObjectQuery(lower);
+    if (isPhysicalObject) {
+      return GroqService.generate3DScene(rawInput);
     }
 
     const { representationType, domain } = await GroqService.classify(rawInput);

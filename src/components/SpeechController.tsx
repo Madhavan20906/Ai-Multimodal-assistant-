@@ -109,27 +109,11 @@ export const SpeechController: React.FC<SpeechControllerProps> = ({
     }
   }, [isListening]);
 
-  // 2. Text to Speech (TTS) Narration
+  // 2. Text to Speech (TTS) Narration — Disabled per user request (Voiceover turned off, voice input remains enabled)
   useEffect(() => {
-    if (!narrationText || !('speechSynthesis' in window)) return;
-
-    window.speechSynthesis.cancel(); // stop previous speech
-
-    const utterance = new SpeechSynthesisUtterance(narrationText);
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
-    utterance.volume = 0.9;
-
-    // Pick a smooth natural voice if available
-    const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(
-      (v) => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha'))
-    );
-    if (preferredVoice) {
-      utterance.voice = preferredVoice;
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel(); // cancel any active speech synthesis
     }
-
-    window.speechSynthesis.speak(utterance);
   }, [narrationText]);
 
   return null; // Headless controller component

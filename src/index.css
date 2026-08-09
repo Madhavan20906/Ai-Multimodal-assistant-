@@ -1633,4 +1633,325 @@ body {
   text-decoration: none;
 }
 
+/* ==========================================
+   Paint App — AR Drawing Overlay System
+   ========================================== */
+
+/* Paint App Toggle Button in Camera HUD */
+.paint-app-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(236, 72, 153, 0.2));
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  color: #e9d5ff;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.paint-app-toggle-btn:hover {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.35), rgba(236, 72, 153, 0.35));
+  border-color: rgba(168, 85, 247, 0.6);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.3);
+  transform: translateY(-1px);
+}
+
+.paint-app-toggle-btn.active {
+  background: linear-gradient(135deg, var(--accent-purple), #ec4899);
+  border-color: var(--accent-purple);
+  color: #fff;
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.5);
+}
+
+.paint-app-toggle-btn.hand-hover {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.5), rgba(236, 72, 153, 0.5));
+  border-color: var(--accent-purple);
+  color: #fff;
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.7), inset 0 0 12px rgba(168, 85, 247, 0.2);
+  animation: handHoverGlow 0.8s ease infinite alternate;
+}
+
+/* Paint Drawing Canvas Layer */
+.paint-draw-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 4;
+  pointer-events: none;
+  /* NOT mirrored — drawing coordinates already account for mirror */
+}
+
+/* Finger cursor ring */
+.paint-finger-cursor {
+  position: absolute;
+  border: 2px solid #06b6d4;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 6;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.5);
+  transition: width 0.1s, height 0.1s;
+  animation: paintCursorPulse 1.5s infinite;
+}
+
+@keyframes paintCursorPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* ── Paint Toolbar ─────────────────────────────────────────────────────── */
+.paint-toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(7, 10, 18, 0.92);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(168, 85, 247, 0.3);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.paint-toolbar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.paint-section-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(168, 85, 247, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding-left: 2px;
+}
+
+.paint-tool-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.paint-toolbar-divider {
+  width: 1px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* Individual tool buttons */
+.paint-tool-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+
+.paint-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.paint-tool-btn.active {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(6, 182, 212, 0.3));
+  border-color: var(--accent-purple);
+  color: #fff;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.25);
+}
+
+.paint-tool-btn.danger {
+  color: #fca5a5;
+}
+
+.paint-tool-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+/* Hand hover effect — glowing ring when hand hovers over a toolbar item */
+.paint-tool-btn.hand-hover,
+.paint-color-swatch.hand-hover,
+.paint-palette-swatch.hand-hover,
+.paint-close-btn.hand-hover {
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.6), inset 0 0 12px rgba(168, 85, 247, 0.15);
+  border-color: var(--accent-purple) !important;
+  animation: handHoverGlow 0.8s ease infinite alternate;
+}
+
+@keyframes handHoverGlow {
+  from { box-shadow: 0 0 12px rgba(168, 85, 247, 0.4), inset 0 0 8px rgba(168, 85, 247, 0.1); }
+  to   { box-shadow: 0 0 24px rgba(168, 85, 247, 0.7), inset 0 0 16px rgba(168, 85, 247, 0.2); }
+}
+
+/* Color preview button */
+.color-preview-btn {
+  position: relative;
+}
+
+.active-color-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
+}
+
+/* Quick color swatch in toolbar */
+.paint-color-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.paint-color-swatch:hover {
+  transform: scale(1.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+}
+
+.paint-color-swatch.active {
+  border-color: #fff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+  transform: scale(1.15);
+}
+
+/* Brush size indicator */
+.paint-size-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+  min-width: 48px;
+  justify-content: center;
+}
+
+/* Close button */
+.paint-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.paint-close-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
+  color: #fff;
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+/* Hand interaction hint */
+.paint-hand-hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  color: rgba(148, 163, 184, 0.6);
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+/* ── Color Palette Dropdown ────────────────────────────────────────────── */
+.paint-palette-dropdown {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  padding: 12px;
+  background: rgba(7, 10, 18, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  animation: paletteSlideIn 0.2s ease;
+}
+
+@keyframes paletteSlideIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.paint-palette-swatch {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 2px;
+}
+
+.paint-palette-swatch:hover {
+  transform: scale(1.1);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
+}
+
+.paint-palette-swatch.active {
+  border-color: #fff;
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.5);
+  transform: scale(1.05);
+}
+
+.palette-swatch-label {
+  font-size: 7px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.8);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 

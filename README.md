@@ -1,5 +1,3 @@
-<div align="center">
-
 # 🧠 AURA — AI Multimodal Visual Workbench
 
 **A real-time, voice-driven AI workspace that turns spoken language into living, interactive simulations.**
@@ -10,17 +8,11 @@
 [![Three.js](https://img.shields.io/badge/Three.js-0.185-black?style=for-the-badge&logo=threedotjs)](https://threejs.org/)
 [![Groq](https://img.shields.io/badge/Groq-LLM-F55036?style=for-the-badge)](https://groq.com/)
 
-</div>
-
----
-
 ## ✨ What is AURA?
 
 AURA is not a chatbot. It is an **intelligent visual operating system** — a persistent workspace that listens to your voice, understands your intent, and autonomously renders immersive, scientifically accurate, interactive simulations. Say *"show me how DNA replication works"* or *"simulate a black hole"* or *"run a titration experiment"* — and watch AURA build it in real time.
 
 > Think of it as your personal AI lab that works across **any domain** — physics, chemistry, mathematics, algorithms, engineering, and beyond.
-
----
 
 ## 🚀 Features
 
@@ -59,8 +51,6 @@ AURA is not a chatbot. It is an **intelligent visual operating system** — a pe
 - Live status bar with AI model info, voice activity indicator, gesture state
 - Scene hierarchy sidebar with object tree
 - Undo/redo history timeline
-
----
 
 ## 🗂️ Project Structure
 
@@ -105,8 +95,6 @@ ai-multimodal-workbench/
 └── tsconfig.json
 ```
 
----
-
 ## 🛠️ Tech Stack
 
 | Technology | Version | Purpose |
@@ -121,8 +109,6 @@ ai-multimodal-workbench/
 | **Web Speech API** | Native | STT continuous recognition + TTS |
 | **Lucide React** | 1.28 | Icon system |
 | **oxlint** | 1.75 | Ultra-fast Rust-based linter |
-
----
 
 ## ⚡ Getting Started
 
@@ -163,8 +149,6 @@ npm run build
 npm run preview
 ```
 
----
-
 ## 🎮 How to Use
 
 1. **Allow camera and microphone** permissions when prompted
@@ -185,8 +169,6 @@ npm run preview
 "How does a black hole work?"
 ```
 
----
-
 ## 🔧 Configuration
 
 ### Vite Config Notes
@@ -203,8 +185,6 @@ optimizeDeps: {
 | Variable | Required | Description |
 |---|---|---|
 | `GROQ_API_KEY` | ✅ Yes | Groq API key for LLM inference |
-
----
 
 ## 🏗️ Architecture Overview
 
@@ -234,8 +214,6 @@ RepresentationPayload ───────────────────�
   TTS Narration (SpeechController)
 ```
 
----
-
 ## 📋 Scripts
 
 | Command | Description |
@@ -244,8 +222,6 @@ RepresentationPayload ───────────────────�
 | `npm run build` | Type-check + production bundle |
 | `npm run preview` | Preview production build locally |
 | `npm run lint` | Run oxlint static analysis |
-
----
 
 ## 🤝 Contributing
 
@@ -257,13 +233,9 @@ Contributions are welcome! Please follow these principles:
 - **No placeholder primitives** — use quality visuals wherever possible
 - Always run `npm run lint` and `npm run build` before submitting a PR
 
----
-
 ## 📄 License
 
 This project is open source. See [LICENSE](LICENSE) for details.
-
----
 
 <div align="center">
 

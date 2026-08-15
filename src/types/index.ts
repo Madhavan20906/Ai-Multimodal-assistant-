@@ -1,4 +1,19 @@
-export type RepresentationType = 
+export interface VoiceConversationPayload {
+  type: 'voice_conversation';
+  domain: DomainCategory;
+  title: string;
+  subtitle?: string;
+  summaryText?: string;
+  voiceNarrationText?: string;
+  conversationHistory: string[];
+  suggestedResponses: string[];
+}
+
+export type WorkbenchPayload =
+  | RepresentationPayload
+  | VoiceConversationPayload;
+
+export type RepresentationType =
   | '3d_scene'
   | 'physics_simulation'
   | 'math_derivation'
@@ -7,7 +22,8 @@ export type RepresentationType =
   | 'code_workbench'
   | 'interactive_diagram'
   | 'chart_graph'
-  | 'rich_knowledge';
+  | 'rich_knowledge'
+  | 'voice_conversation';
 
 export type OperatingMode = 'camera_mic' | 'voice_only';
 

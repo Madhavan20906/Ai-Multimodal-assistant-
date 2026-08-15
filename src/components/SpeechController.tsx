@@ -19,7 +19,7 @@ export const SpeechController: React.FC<SpeechControllerProps> = ({
 
   // 1. Voice Recognition Initialization
   useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || (window as any).mozSpeechRecognition || (window as any).msSpeechRecognition;
 
     if (!SpeechRecognition) {
       console.warn('Web Speech API is not supported in this browser environment.');
@@ -55,7 +55,7 @@ export const SpeechController: React.FC<SpeechControllerProps> = ({
       }
     };
 
-    recognition.onerror = (event: any) => {
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
         // Microphone permission denied — stop retrying entirely
         blockedRef.current = true;
@@ -89,6 +89,12 @@ export const SpeechController: React.FC<SpeechControllerProps> = ({
       }
     };
   }, [onVoiceInput, onInterimTranscript]);
+
+  // 2. Simulation Display
+  const displaySimulation = (simulationData: any) => {
+    // Implementation for displaying the simulation
+    console.log('Displaying simulation:', simulationData);
+  };
 
   // Manage start/stop listening
   useEffect(() => {

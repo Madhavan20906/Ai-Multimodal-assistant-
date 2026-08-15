@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { WorkbenchState, OperatingMode, RepresentationPayload, SceneObject } from './types';
+import { WorkbenchState, OperatingMode, RepresentationPayload, SceneObject, WorkbenchPayload } from './types';
 import { AIRouterService } from './services/aiRouter';
 import { HUDHeader } from './components/HUDHeader';
 import { SpeechController } from './components/SpeechController';

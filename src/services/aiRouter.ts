@@ -1,4 +1,4 @@
-import { RepresentationPayload, DomainCategory, SceneObject } from '../types';
+import { RepresentationPayload, DomainCategory, SceneObject, VoiceConversationPayload } from '../types';
 import { GroqService } from './groqService';
 import { UniversalSimulationGenerator } from './universalSimulationGenerator';
 
@@ -9,14 +9,27 @@ import { UniversalSimulationGenerator } from './universalSimulationGenerator';
  * Uses Groq LLM for domain classification and knowledge generation.
  */
 export class AIRouterService {
+  public static async processVoiceConversation(input: string): Promise<VoiceConversationPayload> {
+    // Implementation for voice conversation processing
+    return {
+      type: 'voice_conversation',
+      domain: 'General',
+      title: 'Voice Conversation',
+      subtitle: 'AI Voice Interaction',
+      summaryText: 'Engaging in a natural voice conversation with the AI assistant.',
+      voiceNarrationText: 'How can I assist you today?',
+      conversationHistory: [],
+      suggestedResponses: [],
+    };
+  }
   /** @deprecated API key is now managed server-side via the Groq proxy middleware */
   public static setApiKey(_key: string) {}
 
   public static async processInput(
     input: string,
-    currentPayload: RepresentationPayload | null,
+    currentPayload: RepresentationPayload | VoiceConversationPayload | null,
     existingObjects: SceneObject[]
-  ): Promise<RepresentationPayload> {
+  ): Promise<RepresentationPayload | VoiceConversationPayload> {
     const text = input.trim().toLowerCase();
 
     // ── 0. Remove / dismiss / clear the AR object ─────────────────────────
@@ -29,9 +42,12 @@ export class AIRouterService {
       text.includes('clear the object') ||
       text.includes('delete the') ||
       text.includes('hide the') ||
-      (text.includes('remove') && text.includes('it'));
+      (text.includes('remove') && text.includes('it')) ||
+      text.startsWith('end conversation') ||
+      text.startsWith('stop talking') ||
+      text.startsWith('exit');
 
-    if (isRemoveCommand && currentPayload?.type === '3d_scene') {
+    if (isRemoveCommand && currentPayload) {
       return {
         type: 'rich_knowledge',
         domain: 'General',
@@ -67,10 +83,12 @@ export class AIRouterService {
 
     // ── 3. AI-powered routing via Groq (primary path) ─────────────────────
     try {
-      return await this.groqRoute(input);
+      const processedResult = await this.groqRoute(input);
+      return processedResult;
     } catch (e) {
       console.warn('[AIRouter] Groq unavailable — using Universal Simulation Generator:', e);
-      return UniversalSimulationGenerator.createScenario(input);
+      const simulation = UniversalSimulationGenerator.createScenario(input);
+      return simulation;
     }
   }
 

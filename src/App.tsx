@@ -23,10 +23,10 @@ export const App: React.FC = () => {
     mode: 'voice_only',
     isListening: true,
     isCameraActive: false,
-    activePayload: UniversalSimulationGenerator.getSpaceRocketPreset(),
+    activePayload: null,
     objectHierarchy: [],
-    history: [UniversalSimulationGenerator.getSpaceRocketPreset()],
-    historyIndex: 0,
+    history: [],
+    historyIndex: -1,
     speechTranscript: '',
     interimTranscript: '',
     detectedGesture: 'Hands-free Ready',
@@ -46,14 +46,13 @@ export const App: React.FC = () => {
   const lastPreRouteRef   = useRef<string>('');
   const isPreRoutingRef   = useRef(false);
 
-  // Initial welcome scene — runs once on mount
+  // Initial workbench setup
   useEffect(() => {
-    const initialPayload = UniversalSimulationGenerator.getSpaceRocketPreset();
     setState((prev) => ({
       ...prev,
-      activePayload: initialPayload,
-      history: [initialPayload],
-      historyIndex: 0,
+      activePayload: null,
+      history: [],
+      historyIndex: -1,
     }));
   }, []); // empty deps: intentionally runs once
 
@@ -170,17 +169,18 @@ export const App: React.FC = () => {
     if (isARMode)              return null;
 
     // Universal engine handles all scenario-based types including chemistry
-    if (state.activePayload.scenarioData || state.activePayload.type === '3d_scene') {
-      return <UniversalScenarioSimulator payload={state.activePayload} />;
+    if (state.activePayload.type === 'voice_conversation') {
+      return null;
     }
 
     switch (state.activePayload.type) {
-      case 'physics_simulation':return <PhysicsSimulator payload={state.activePayload} />;
-      case 'math_derivation':   return <MathDerivationView payload={state.activePayload} />;
+      case '3d_scene':           return <ThreeDWorkbench payload={state.activePayload} />;
+      case 'physics_simulation': return <PhysicsSimulator payload={state.activePayload} />;
+      case 'math_derivation':    return <MathDerivationView payload={state.activePayload} />;
       case 'algorithm_visualizer': return <AlgorithmVisualizer payload={state.activePayload} />;
-      case 'code_workbench':    return <CodeWorkbenchView payload={state.activePayload} />;
+      case 'code_workbench':     return <CodeWorkbenchView payload={state.activePayload} />;
       case 'interactive_diagram': return <InteractiveDiagramView payload={state.activePayload} />;
-      default:                  return <UniversalScenarioSimulator payload={state.activePayload} />;
+      default:                   return null;
     }
   };
 

@@ -29,7 +29,7 @@ export const SceneHierarchy: React.FC<SceneHierarchyProps> = ({
         <div className="object-tree-container">
           {objects.length === 0 ? (
             <div className="empty-tree-notice">
-              <span>No persistent 3D/Scene objects yet. Speak a command like "Give me a water bottle" or "Create a red car".</span>
+              <span>No persistent 3D/Scene objects yet. Speak or type a command like "Create a red car" or "Simulate solar system".</span>
             </div>
           ) : (
             objects.map((obj) => (

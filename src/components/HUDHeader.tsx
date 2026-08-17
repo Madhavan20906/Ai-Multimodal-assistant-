@@ -119,7 +119,7 @@ export const HUDHeader: React.FC<HUDHeaderProps> = ({
           <input
             type="text"
             className="spoken-input"
-            placeholder='Speak or type: "Create red car", "Fill bottle 80%", "Solve x²-5x+6"...'
+            placeholder='Speak or type: "Create red car", "Simulate solar system", "Solve x²-5x+6"...'
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}

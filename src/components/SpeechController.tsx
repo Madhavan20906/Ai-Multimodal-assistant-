@@ -1,18 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 
-interface SpeechControllerProps {
+interface Props {
   isListening: boolean;
   onVoiceInput: (transcript: string) => void;
   onInterimTranscript: (interim: string) => void;
   narrationText?: string;
 }
 
-export const SpeechController: React.FC<SpeechControllerProps> = ({
-  isListening,
-  onVoiceInput,
-  onInterimTranscript,
-  narrationText
-}) => {
+export const SpeechController: React.FC<Props> = ({ isListening, onVoiceInput, onInterimTranscript, narrationText }) => {
   const recognitionRef = useRef<any>(null);
   const blockedRef = useRef<boolean>(false);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -20,7 +15,6 @@ export const SpeechController: React.FC<SpeechControllerProps> = ({
   // 1. Voice Recognition Initialization
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || (window as any).mozSpeechRecognition || (window as any).msSpeechRecognition;
-
     if (!SpeechRecognition) {
       console.warn('Web Speech API is not supported in this browser environment.');
       return;
@@ -55,20 +49,17 @@ export const SpeechController: React.FC<SpeechControllerProps> = ({
       }
     };
 
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+    recognition.onerror = (event: any) => {
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-        // Microphone permission denied — stop retrying entirely
         blockedRef.current = true;
-        console.warn('Microphone permission denied. Open the app in a new tab to grant access.');
+        console.warn('Microphone permission denied.');
       } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
         console.warn('Speech recognition error:', event.error);
       }
     };
 
     recognition.onend = () => {
-      // Do not restart if permission was denied or listening was stopped
       if (!isListening || blockedRef.current || !recognitionRef.current) return;
-      // Brief delay before restart to avoid tight spin loops on transient errors
       retryTimerRef.current = setTimeout(() => {
         if (!isListening || blockedRef.current) return;
         try {
@@ -84,17 +75,13 @@ export const SpeechController: React.FC<SpeechControllerProps> = ({
     return () => {
       if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
         recognitionRef.current = null;
       }
     };
-  }, [onVoiceInput, onInterimTranscript]);
-
-  // 2. Simulation Display
-  const displaySimulation = (simulationData: any) => {
-    // Implementation for displaying the simulation
-    console.log('Displaying simulation:', simulationData);
-  };
+  }, [onVoiceInput, onInterimTranscript, isListening]);
 
   // Manage start/stop listening
   useEffect(() => {
@@ -103,24 +90,21 @@ export const SpeechController: React.FC<SpeechControllerProps> = ({
     if (isListening) {
       try {
         recognitionRef.current.start();
-      } catch (e) {
-        // Already started
-      }
+      } catch (e) {}
     } else {
       try {
         recognitionRef.current.stop();
-      } catch (e) {
-        // Already stopped
-      }
+      } catch (e) {}
     }
   }, [isListening]);
 
-  // 2. Text to Speech (TTS) Narration — Disabled per user request (Voiceover turned off, voice input remains enabled)
+  // Text to Speech (TTS) cancel if narrationText changes
   useEffect(() => {
     if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel(); // cancel any active speech synthesis
+      window.speechSynthesis.cancel();
     }
   }, [narrationText]);
 
   return null; // Headless controller component
 };
+

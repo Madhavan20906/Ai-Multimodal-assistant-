@@ -220,7 +220,7 @@ export const CameraHandTracker: React.FC<CameraHandTrackerProps> = ({
 
     if (!activePayload || activePayload.type !== '3d_scene' || !activePayload.threeDData) return;
 
-    const primaryType = activePayload.threeDData.primaryObject || 'water_bottle';
+    const primaryType = activePayload.threeDData.primaryObject || 'sphere';
     const obj0        = activePayload.threeDData.objects[0];
     const colorHex    = obj0?.properties?.color || '#06b6d4';
     const sizeScale   = obj0?.properties?.size || 1.0;

@@ -99,7 +99,7 @@ export const ThreeDWorkbench: React.FC<ThreeDWorkbenchProps> = ({ payload }) => 
     scene.add(back);
 
     // ── Grid / Environment ────────────────────────────────────────────────
-    const primaryType = payload.threeDData?.primaryObject || 'water_bottle';
+    const primaryType = payload.threeDData?.primaryObject || 'sphere';
     const env         = payload.threeDData?.environment || 'grid';
     const obj0        = payload.threeDData?.objects[0];
     const colorHex    = obj0?.properties?.color || '#06b6d4';

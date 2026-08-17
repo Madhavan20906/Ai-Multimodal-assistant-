@@ -14,7 +14,7 @@ export const UniversalScenarioSimulator: React.FC<UniversalScenarioSimulatorProp
   const [payload, setPayload] = useState<RepresentationPayload>(initialPayload);
   const scenarioData = payload.scenarioData;
 
-  const steps: SimulationStep[] = scenarioData?.steps || [
+  const steps: SimulationStep[] = (scenarioData?.steps as unknown as SimulationStep[]) || [
     {
       stepNumber: 1,
       title: 'STEP 1: Scenario Overview',
@@ -26,7 +26,7 @@ export const UniversalScenarioSimulator: React.FC<UniversalScenarioSimulatorProp
     },
   ];
 
-  const entities: SimulationEntity[] = scenarioData?.entities || [
+  const entities: SimulationEntity[] = (scenarioData?.entities as unknown as SimulationEntity[]) || [
     { id: 'e1', name: 'Primary Entity', shape: 'sphere' as const, color: '#06b6d4', size: 2.5, position: { x: 0, y: 0, z: 0 }, glowing: true }
   ];
 
@@ -231,11 +231,7 @@ export const UniversalScenarioSimulator: React.FC<UniversalScenarioSimulatorProp
 
       {/* Main Viewport Canvas */}
       <div className="chem-workbench-viewport realistic-viewport">
-        {payload.simulationData ? (
-          <UniversalScenarioSimulator payload={payload.scenarioData} />
-        ) : (
-          <canvas ref={canvasRef} className="chem-simulation-canvas" />
-        )}
+        <canvas ref={canvasRef} className="chem-simulation-canvas" />
 
         {/* Floating Camera View Controls */}
         <div className="camera-view-overlay">

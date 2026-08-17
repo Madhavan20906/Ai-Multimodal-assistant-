@@ -23,6 +23,7 @@ export type RepresentationType =
   | 'interactive_diagram'
   | 'chart_graph'
   | 'rich_knowledge'
+  | 'universal_scenario'
   | 'voice_conversation';
 
 export type OperatingMode = 'camera_mic' | 'voice_only';

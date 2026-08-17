@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { WorkbenchState, OperatingMode, RepresentationPayload, SceneObject, WorkbenchPayload } from './types';
 import { AIRouterService } from './services/aiRouter';
 import { HUDHeader } from './components/HUDHeader';
-import { SpeechController } from './components/SpeechController';
 import { CameraHandTracker } from './components/CameraHandTracker';
 import { SceneHierarchy } from './components/SceneHierarchy';
 import { DomainPresets } from './components/DomainPresets';
@@ -15,13 +14,14 @@ import { AlgorithmVisualizer }   from './components/representations/AlgorithmVis
 
 import { CodeWorkbenchView }     from './components/representations/CodeWorkbenchView';
 import { InteractiveDiagramView }from './components/representations/InteractiveDiagramView';
-import { UniversalScenarioSimulator } from './components/representations/UniversalScenarioSimulator';
+import VideoPlayer from './components/VideoPlayer';
+import { aiVideoGenerator } from './services/aiVideoGenerator';
 import { UniversalSimulationGenerator } from './services/universalSimulationGenerator';
 
 export const App: React.FC = () => {
   const [state, setState] = useState<WorkbenchState>({
-    mode: 'voice_only',
-    isListening: true,
+    mode: 'camera_mic',
+    isListening: false,
     isCameraActive: false,
     activePayload: null,
     objectHierarchy: [],
@@ -72,13 +72,18 @@ export const App: React.FC = () => {
       const newPayload = await AIRouterService.processInput(
         input,
         state.activePayload,
-        state.objectHierarchy,
+        state.objectHierarchy
       );
+
+      // Force universal_scenario type for AI video generation if scenario/simulation
+      if (!newPayload.type || newPayload.type.includes('scenario') || newPayload.type.includes('simulation')) {
+        newPayload.type = 'universal_scenario';
+      }
 
       setState((prev) => {
         let updatedObjects = [...prev.objectHierarchy];
-        if (newPayload.threeDData?.objects) {
-          newPayload.threeDData.objects.forEach((newObj) => {
+        if ('threeDData' in newPayload && newPayload.threeDData?.objects) {
+          newPayload.threeDData.objects.forEach((newObj: SceneObject) => {
             const idx = updatedObjects.findIndex((o) => o.id === newObj.id);
             if (idx >= 0) updatedObjects[idx] = newObj;
             else          updatedObjects.push(newObj);
@@ -166,13 +171,18 @@ export const App: React.FC = () => {
 
   const renderActiveRepresentation = () => {
     if (!state.activePayload) return null;
-    if (isARMode)              return null;
 
-    // Universal engine handles all scenario-based types including chemistry
+    // Skip rendering for chat-like voice_conversation type
     if (state.activePayload.type === 'voice_conversation') {
       return null;
     }
 
+    // Handle AI video generation for universal scenarios
+    if (state.activePayload?.type === 'universal_scenario') {
+      return <VideoPlayer scenario={state.speechTranscript} />;
+    }
+
+    // Direct rendering for all other payload types
     switch (state.activePayload.type) {
       case '3d_scene':           return <ThreeDWorkbench payload={state.activePayload} />;
       case 'physics_simulation': return <PhysicsSimulator payload={state.activePayload} />;
@@ -186,13 +196,17 @@ export const App: React.FC = () => {
 
   return (
     <div className="aura-workbench-root">
-      {/* Speech Controller Engine (headless STT + TTS) */}
-      <SpeechController
-        isListening={state.isListening}
-        onVoiceInput={handleProcessCommand}
-        onInterimTranscript={handleInterimTranscript}
-        narrationText={state.activePayload?.voiceNarrationText}
-      />
+      {/* Text Input Engine for AI Simulation Generation */}
+      <div className="text-input-engine">
+        <input
+          type="text"
+          placeholder="Describe a scenario for AI video simulation (e.g., 'How does a car engine work?')..."
+          value={state.speechTranscript}
+          onChange={(e) => setState((s) => ({...s, speechTranscript: e.target.value }))}
+          onKeyDown={(e) => e.key === 'Enter' && handleProcessCommand(state.speechTranscript)}
+          className="scenario-input"
+        />
+      </div>
 
       {/* Top HUD Header */}
       <HUDHeader
@@ -229,7 +243,56 @@ export const App: React.FC = () => {
       {/* Main layout: viewport + sidebar */}
       <div className="workbench-main-layout">
         <main className="workbench-viewport-container">
-          {renderActiveRepresentation()}
+          {state.speechTranscript ? renderActiveRepresentation() : (
+            <div className="welcome-message">
+              <h2>AI Multimodal Workbench</h2>
+              <p>Describe a scenario using your voice or type in the input field above</p>
+              <p>Example: "Show me how photosynthesis works" or "Explain quantum computing"</p>
+              <div className="feature-highlight">
+                <h3>AI Video Simulation</h3>
+                <p>Type or speak a scenario to generate an AI explainer video</p>
+                <div className="demo-button" onClick={() => setState(prev => ({...prev, speechTranscript: 'How does photosynthesis work?'}))}>Try Demo</div>
+          <style>{`
+            .welcome-message {
+              padding: 20px;
+              text-align: center;
+              color: #333;
+              background: #f5f5f5;
+              border-radius: 8px;
+              margin: 20px;
+            }
+            .feature-highlight {
+              margin-top: 20px;
+              padding: 15px;
+              background: #e9f7fe;
+              border-radius: 8px;
+              border-left: 4px solid #4a9eff;
+            }
+            .demo-button {
+              margin-top: 15px;
+              padding: 8px 16px;
+              background: #4a9eff;
+              color: white;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+              font-weight: bold;
+            }
+            .demo-button:hover {
+              background: #3a8bef;
+            }
+            .scenario-input {
+              width: 100%;
+              padding: 10px;
+              margin: 10px 0;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+              font-size: 16px;
+            }
+          `}</style>
+              </div>
+            </div>
+          )}
 
           <CameraHandTracker
             isCameraActive={state.isCameraActive}
